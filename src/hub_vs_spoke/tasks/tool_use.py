@@ -2,6 +2,9 @@
 
 from hub_vs_spoke.tasks.base import EvalMethod, Task, TaskCategory, default_registry
 
+SQL_SNIPPET_USER_STATS = "select count(*) as total, avg(score) as avg"
+LATENCY_METRIC_REGEX = "latency|query"
+
 TOOL_USE_TASKS = [
     Task(
         task_id="tool_use-001",
@@ -22,7 +25,25 @@ TOOL_USE_TASKS = [
             "Must call calculate with '366 * 24 * 60 * 60' (or equivalent), "
             "then format_report. Must include correct answer: 31622400."
         ),
-        metadata={"expected_tools": ["calculate", "format_report"]},
+        metadata={
+            "expected_tools": ["calculate", "format_report"],
+            # Optional structured spec for arg-aware evaluation.
+            "expected_call_spec": {
+                "sequence": [
+                    {
+                        "any_of": [
+                            {"tool": "calculate", "args": [{"evals_to": 31622400}]},
+                            {
+                                "tool": "calculate",
+                                "kwargs": {"expression": {"evals_to": 31622400}},
+                            },
+                        ]
+                    },
+                    {"tool": "format_report"},
+                ],
+                "require_text": ["31622400"],
+            },
+        },
         difficulty="easy",
     ),
     Task(
@@ -46,7 +67,26 @@ TOOL_USE_TASKS = [
             "Must show awareness of data dependencies between calls."
         ),
         metadata={
-            "expected_tools": ["fetch_user", "fetch_orders", "fetch_product", "send_email"]
+            "expected_tools": ["fetch_user", "fetch_orders", "fetch_product", "send_email"],
+            "expected_call_spec": {
+                "sequence": [
+                    {
+                        "any_of": [
+                            {"tool": "fetch_user", "args": [42]},
+                            {"tool": "fetch_user", "kwargs": {"user_id": 42}},
+                        ]
+                    },
+                    {
+                        "any_of": [
+                            {"tool": "fetch_orders", "args": [42]},
+                            {"tool": "fetch_orders", "kwargs": {"user_id": 42}},
+                        ]
+                    },
+                    {"tool": "fetch_product"},
+                    {"tool": "send_email"},
+                ],
+                "require_any_text": ["most recent order", "latest order"],
+            },
         },
         difficulty="medium",
     ),
@@ -73,7 +113,72 @@ TOOL_USE_TASKS = [
             "for hit; (2) cache miss — cache_get returns None, query_db, cache_set "
             "with ttl=300, log_metric for miss and query time."
         ),
-        metadata={"expected_tools": ["cache_get", "query_db", "cache_set", "log_metric"]},
+        metadata={
+            "expected_tools": ["cache_get", "query_db", "cache_set", "log_metric"],
+            "expected_call_spec": {
+                "scenarios": {
+                    "hit": [
+                        {
+                            "any_of": [
+                                {"tool": "cache_get", "kwargs": {"key": "user_stats"}},
+                                {"tool": "cache_get", "args": ["user_stats"]},
+                            ]
+                        },
+                        {
+                            "any_of": [
+                                {"tool": "log_metric", "kwargs": {"name": {"regex": "hit"}}},
+                                {"tool": "log_metric", "args": [{"regex": "hit"}]},
+                            ]
+                        },
+                    ],
+                    "miss": [
+                        {
+                            "any_of": [
+                                {"tool": "cache_get", "kwargs": {"key": "user_stats"}},
+                                {"tool": "cache_get", "args": ["user_stats"]},
+                            ]
+                        },
+                        {
+                            "any_of": [
+                                {
+                                    "tool": "query_db",
+                                    "kwargs": {
+                                        "sql": {
+                                            "contains": SQL_SNIPPET_USER_STATS
+                                        }
+                                    },
+                                },
+                                {
+                                    "tool": "query_db",
+                                    "args": [{"contains": SQL_SNIPPET_USER_STATS}],
+                                },
+                            ]
+                        },
+                        {
+                            "any_of": [
+                                {"tool": "cache_set", "kwargs": {"ttl": 300}},
+                                {"tool": "cache_set", "args": [{"any": True}, {"any": True}, 300]},
+                            ]
+                        },
+                        {
+                            "any_of": [
+                                {"tool": "log_metric", "kwargs": {"name": {"regex": "miss"}}},
+                                {"tool": "log_metric", "args": [{"regex": "miss"}]},
+                            ]
+                        },
+                        {
+                            "any_of": [
+                                {
+                                    "tool": "log_metric",
+                                    "kwargs": {"name": {"regex": LATENCY_METRIC_REGEX}},
+                                },
+                                {"tool": "log_metric", "args": [{"regex": LATENCY_METRIC_REGEX}]},
+                            ]
+                        },
+                    ],
+                }
+            },
+        },
         difficulty="hard",
     ),
 ]

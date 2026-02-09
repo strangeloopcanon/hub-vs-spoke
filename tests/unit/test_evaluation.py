@@ -92,6 +92,94 @@ class TestFunctionCallCheck:
         assert result["ordered"] is False
 
 
+class TestFunctionCallCheckStructured:
+    def test_sequence_checks_positional_args(self) -> None:
+        output = (
+            "1) calculate('366 * 24 * 60 * 60') -> 31622400\n"
+            "2) format_report(title='Leap year seconds', sections=['calc', 'result']) -> '...'\n"
+        )
+        spec = {
+            "sequence": [
+                {"tool": "calculate", "args": [{"evals_to": 31622400}]},
+                {"tool": "format_report"},
+            ],
+            "require_text": ["31622400"],
+        }
+        result = DeterministicEvaluator.function_call_check(output, spec)
+        assert result["match"] is True
+
+    def test_sequence_fails_on_wrong_math(self) -> None:
+        output = "calculate('365 * 24 * 60 * 60') -> 31536000\nformat_report(...)"
+        spec = {
+            "sequence": [
+                {"tool": "calculate", "args": [{"evals_to": 31622400}]},
+                {"tool": "format_report"},
+            ]
+        }
+        result = DeterministicEvaluator.function_call_check(output, spec)
+        assert result["match"] is False
+
+    def test_scenarios_requires_hit_and_miss_paths(self) -> None:
+        output = (
+            "Cache hit:\n"
+            "- cache_get(key='user_stats') -> '{\"total\": 10}'\n"
+            "- log_metric(name='cache_hit', value=1)\n\n"
+            "Cache miss:\n"
+            "- cache_get(key='user_stats') -> None\n"
+            "- query_db(sql='SELECT count(*) as total, avg(score) as avg FROM users') -> []\n"
+            "- cache_set(key='user_stats', value='...', ttl=300) -> True\n"
+            "- log_metric(name='cache_miss', value=1)\n"
+            "- log_metric(name='query_latency_ms', value=12.3)\n"
+        )
+        spec = {
+            "require_any_text": ["cache hit", "cache-hit"],
+            "scenarios": {
+                "hit": [
+                    {"tool": "cache_get", "kwargs": {"key": "user_stats"}},
+                    {"tool": "log_metric", "kwargs": {"name": {"regex": "hit"}}},
+                ],
+                "miss": [
+                    {"tool": "cache_get", "kwargs": {"key": "user_stats"}},
+                    {
+                        "tool": "query_db",
+                        "kwargs": {
+                            "sql": {"contains": "select count(*) as total, avg(score) as avg"}
+                        },
+                    },
+                    {"tool": "cache_set", "kwargs": {"ttl": 300}},
+                    {"tool": "log_metric", "kwargs": {"name": {"regex": "miss"}}},
+                    {"tool": "log_metric", "kwargs": {"name": {"regex": "latency|query"}}},
+                ],
+            },
+        }
+        result = DeterministicEvaluator.function_call_check(output, spec)
+        assert result["match"] is True
+
+    def test_scenarios_fails_if_only_one_path(self) -> None:
+        output = (
+            "Cache miss only:\n"
+            "cache_get(key='user_stats') -> None\n"
+            "query_db(sql='SELECT count(*) as total, avg(score) as avg FROM users')\n"
+            "cache_set(key='user_stats', value='...', ttl=300)\n"
+            "log_metric(name='cache_miss', value=1)\n"
+            "log_metric(name='query_latency_ms', value=12.3)\n"
+        )
+        spec = {
+            "scenarios": {
+                "hit": [
+                    {"tool": "cache_get", "kwargs": {"key": "user_stats"}},
+                    {"tool": "log_metric", "kwargs": {"name": {"regex": "hit"}}},
+                ],
+                "miss": [
+                    {"tool": "cache_get", "kwargs": {"key": "user_stats"}},
+                    {"tool": "query_db"},
+                ],
+            }
+        }
+        result = DeterministicEvaluator.function_call_check(output, spec)
+        assert result["match"] is False
+
+
 # ---------------------------------------------------------------------------
 # CostCalculator
 # ---------------------------------------------------------------------------
