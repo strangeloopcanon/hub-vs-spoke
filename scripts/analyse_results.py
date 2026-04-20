@@ -3,7 +3,7 @@
 
 Usage:
     python scripts/analyse_results.py benchmark_results.jsonl
-    python scripts/analyse_results.py results/yolo_run.jsonl --csv results/summary.csv
+    python scripts/analyse_results.py results/hard_run.jsonl --csv results/hard_summary.csv
 """
 
 from __future__ import annotations

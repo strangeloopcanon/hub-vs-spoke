@@ -4,7 +4,7 @@ If you can call multiple LLMs, is it better to use one strong model, have one or
 
 ## Results
 
-We ran two experiments. The pilot (9 tasks, 1 rep) suggested the market was dominant. The full run (15 tasks, 3 reps) showed that was partly a small-sample effect. Both are reported here.
+The results below are from the 15-task, 3-repetition full run saved in `results/hard_run.jsonl` and `results/hard_summary.csv`.
 
 ### Full run (15 tasks, 3 reps, 135 scored runs)
 
@@ -30,7 +30,7 @@ xychart-beta
 | Solo (Opus 4.6) | 7.2 | 73% (33/45) | $1.69 | 4.2 |
 | Hub-Spoke | 6.7 | 67% (30/45) | $5.33 | 1.3 |
 
-The competitive market matched the best single model on quality and cost 21% less. Hub-spoke cost 4x more than either for a lower score. Bootstrap 95% CIs on mean score: market [6.1, 8.2], solo [6.3, 8.0], hub-spoke [5.8, 7.5] — the intervals overlap, so the overall averages are not statistically distinguishable. The category-level patterns below are where the real separation lives.
+The competitive market matched the best single model on quality while costing 21% less than solo in the full run. Hub-spoke cost about 4x more than the market and a little over 3x more than solo for a lower score. Bootstrap 95% CIs on mean score: market [6.1, 8.2], solo [6.3, 8.0], hub-spoke [5.8, 7.5] — the intervals overlap, so the overall averages are not statistically distinguishable. The category-level patterns below are where the real separation lives.
 
 ### When the market wins: reasoning
 
@@ -40,48 +40,15 @@ The competitive market matched the best single model on quality and cost 21% les
 | **Reasoning** | **7.1** | 5.1 | 5.2 |
 | **Synthesis** | 7.7 | **8.1** | 6.9 |
 
-The market scored 7.1 on reasoning where solo and hub-spoke both landed around 5. The bidding process appears to function as forced deliberation: models assess the task before attempting it, which helps on problems that punish rushing. The market was the only condition that solved the exact-match probability question (10/33) across all three reps.
+The market scored 7.1 on reasoning where solo and hub-spoke both landed around 5. A cautious read is that the bidding and retry flow helped on some problems that punish overconfident first passes. A large share of that edge came from the exact-match probability question, where the market was the only condition to solve the task across all three reps.
 
 ### When solo wins: coding
 
-For implementing data structures, debugging, and refactoring, a single strong model beats coordination. Solo Opus scored 8.4; the market managed 6.7. Adding more cooks to the kitchen adds noise without helping.
+For implementing data structures, debugging, and refactoring, a single strong model was best. Solo Opus scored 8.4, hub-spoke 7.9, and the market 6.7.
 
 ### When it's close: synthesis
 
 Comparing architectures, constructing arguments, multi-audience explanation — solo edged the market 8.1 to 7.7. Hub-spoke trailed both at 6.9.
-
-### Pilot vs full run
-
-| Metric | Pilot (9 tasks, 1 rep) | Full run (15 tasks, 3 reps) |
-|---|---|---|
-| Market avg score | **8.8** | 7.2 |
-| Solo avg score | 7.2 | 7.2 |
-| Hub-spoke avg score | 7.1 | 6.7 |
-| Market pass rate | **100%** (9/9) | 76% (34/45) |
-| Market total cost | $0.41 | $1.34 |
-| Solo total cost | $0.31 | $1.69 |
-| Hub-spoke total cost | $1.00 | $5.33 |
-
-The pilot's sample was too small to separate signal from noise. With harder tasks and repetitions, the market's quality edge disappeared — it converged with solo at 7.2. What held up: the market's cost-efficiency advantage (cheapest per quality point in both experiments) and the category-level patterns (market wins reasoning, solo wins coding).
-
-Solo was stable across both experiments: 7.2 in the pilot, 7.2 in the full run. Hub-spoke dropped from 7.1 to 6.7, suggesting the hierarchical approach degrades on harder tasks.
-
-<details>
-<summary>Pilot per-task scores (Experiment 1)</summary>
-
-| Task | Agent Economy | Hub-Spoke | Solo |
-|---|---|---|---|
-| coding-001 (interval store) | 8 | 9 | **10** |
-| coding-002 (debug sliding window) | **10** | **10** | **10** |
-| coding-003 (refactor monolith) | 7 | **9** | 6 |
-| reasoning-001 (combinatorial probability) | **10** | 0 | 0 |
-| reasoning-002 (constraint scheduling) | **10** | **10** | 9 |
-| reasoning-003 (causal chain) | 9 | 9 | 9 |
-| synthesis-001 (distributed consistency) | **9** | 8 | 6 |
-| synthesis-002 (monorepo debate) | **9** | 7 | 7 |
-| synthesis-003 (multi-audience Raft) | 7 | 2 | **8** |
-
-</details>
 
 <details>
 <summary>Full-run per-task scores (Experiment 2, averaged over 3 reps)</summary>
@@ -127,13 +94,11 @@ On hard tasks the market and solo held steady while hub-spoke dropped. The categ
 
 The market had three participants: GPT-5.2, Opus 4.6, and GPT-5-mini.
 
-**Who won bids?** GPT-5.2 dominated with 28 task wins across 3 sessions. Opus 4.6 took 11. GPT-5-mini never won a single task — the market learned it was unreliable and stopped routing to it. In economic terms, mini was priced out: its bids couldn't compete on the quality-adjusted margin.
+**Who handled tasks?** Across 45 full-run market tasks, GPT-5.2 handled 28, Opus 4.6 handled 11, six runs ended with no filled task, and GPT-5-mini handled none. The market clearly filtered out the weakest worker, but it did not discover a rich three-way specialisation pattern.
 
 **Reputation at session end**: GPT-5.2 = 1.14, Opus 4.6 = 1.18, GPT-5-mini = 1.00 (unchanged from start). Despite winning fewer tasks, Opus 4.6 maintained slightly higher reputation because its wins were higher-quality — a quality-over-quantity dynamic.
 
-**Routing accuracy**: On 5 shadow tasks per rep (15 total checks), the market's pick matched the oracle (the best model as determined by running all three) 80% of the time (12/15). The 3 misses: one hard logic puzzle where it picked the wrong model (6-point regret), and two tasks where the market failed to fill the task.
-
-**Pilot comparison**: In the pilot, Opus 4.6 won 7/9 tasks and GPT-5.2 won 2/9. In the full run, that flipped — GPT-5.2 won 28/39. The added coding and reasoning tasks favoured GPT-5.2, suggesting the pilot's task mix happened to suit Opus.
+**Routing accuracy**: On 5 shadow tasks per rep (15 total checks), the market's pick matched the oracle (the best model as determined by running all three) 80% of the time (12/15). One miss was a clean wrong-model pick on the hard logic puzzle (6-point regret). The other two misses were no-fill runs where a strong shadow answer existed but the executed path returned 0.
 
 </details>
 
@@ -142,19 +107,18 @@ The market had three participants: GPT-5.2, Opus 4.6, and GPT-5-mini.
 
 On 5 shadow tasks per rep, all three market workers independently answered the same question. This checks whether the market routed to the best model.
 
-Most tasks showed no regret — the market's pick matched or tied the oracle. The notable miss was reasoning-004 rep 0: the market picked Opus 4.6 (score 3) when GPT-5.2 would have scored 9. On all other reasoning and synthesis shadows, routing was optimal.
+Most checks showed no regret, but the misses split into two different failure modes. The clean routing miss was reasoning-004 rep 0: the market picked Opus 4.6 (score 3) when GPT-5.2 would have scored 9. The other misses were coding-005 rep 1 and synthesis-005 rep 0, where the market failed to fill the task even though the shadow answers contained a 9-point candidate.
 
-**Parallel-3-pick baseline** (run all three, judge picks best): on 12/15 shadow runs the market matched this baseline. The 3 misses would have cost roughly $0.15 extra per task to catch by running all models.
+**Parallel-3-pick baseline** (run all three, judge picks best): on 12/15 shadow runs the market matched this baseline. The misses were one wrong-model pick and two no-fill executions.
 
 </details>
 
 ## Key takeaways
 
 - **No single topology dominates.** The market wins on reasoning, solo wins on coding, and they tie overall. The right choice depends on what you're doing.
-- **Coordination has a cost.** Hub-spoke spent 4x more than solo or market and scored lowest. The overhead of decomposing, delegating, and synthesising didn't pay for itself on any task category.
+- **Coordination has a cost.** Hub-spoke spent about 4x more than the market and a little over 3x more than solo, yet still scored lowest. The overhead of decomposing, delegating, and synthesising did not pay for itself here.
 - **The market's real advantage is efficiency, not quality.** It matched solo's quality at 21% lower cost by routing most tasks to the cheaper model that could handle them.
-- **Reputation works as a filter, not a router.** The market learned to exclude the weakest model (GPT-5-mini never won a bid) but didn't learn to match task types to model strengths — GPT-5.2 won most tasks regardless of category.
-- **Small samples flatter novel approaches.** The pilot's 8.8 average for the market dropped to 7.2 with more data. Replication matters.
+- **Reputation worked as a coarse filter more than a fine router.** The market excluded GPT-5-mini, leaned heavily toward GPT-5.2, and still left six runs unfilled.
 
 ## How it works
 
@@ -217,9 +181,9 @@ Tasks range from medium (implement an interval store, schedule 6 talks into 3 ro
 
 ### Why the market is cheaper
 
-Solo runs every task through Opus 4.6, which charges $25 per million output tokens. The market routed 28 of 39 won tasks to GPT-5.2 at $14 per million — it learned that the cheaper model was good enough most of the time. Even with the overhead of bidding, judging, and verification, cheaper per-token rates more than offset the extra volume.
+Solo runs every task through Opus 4.6, which charges $25 per million output tokens. In the full run, the market handed 28 of its 39 filled tasks to GPT-5.2 at $14 per million, sent 11 to Opus, and still finished cheaper overall despite the extra bidding, judging, and verification steps.
 
-This is the market doing what markets do: finding the efficient allocation. The reputation system acts as a quality signal. The bidding process forces each model to reveal information about its own expected performance. Together they produce a cost-quality frontier that no single model achieves alone — not by being smarter, but by routing cheap tasks cheaply and expensive tasks to the model most likely to succeed.
+In this benchmark, the market behaved less like a perfect specialist router and more like a cheap-enough default router with a reputation gate. The cost edge came from spending most successful executions on the cheaper strong model, not from finding a higher quality ceiling.
 
 ## Caveats
 
