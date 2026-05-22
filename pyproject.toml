@@ -31,6 +31,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+pythonpath = ["src"]
 markers = [
     "live: marks tests that make real API calls (deselect with '-m \"not live\"')",
     "unit: marks fast unit tests with no network",

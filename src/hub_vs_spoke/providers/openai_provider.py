@@ -12,6 +12,14 @@ from hub_vs_spoke.types import LLMResponse, Message, Timer, Usage
 logger = structlog.get_logger()
 
 
+_DEFAULT_TEMPERATURE_ONLY_PREFIXES = ("gpt-5",)
+
+
+def _requires_default_temperature(model: str) -> bool:
+    """Return whether the model rejects explicit non-default temperature values."""
+    return model.startswith(_DEFAULT_TEMPERATURE_ONLY_PREFIXES)
+
+
 class OpenAIProvider:
     """Wraps the OpenAI chat completions API into the LLMProvider protocol."""
 
@@ -36,14 +44,17 @@ class OpenAIProvider:
             for m in messages
         ]
 
+        create_kwargs: dict[str, Any] = {
+            "model": self._model,
+            "messages": oai_messages,
+            "max_completion_tokens": max_tokens,
+            **kwargs,
+        }
+        if not _requires_default_temperature(self._model):
+            create_kwargs["temperature"] = temperature
+
         with Timer() as t:
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                messages=oai_messages,  # type: ignore[arg-type]
-                temperature=temperature,
-                max_completion_tokens=max_tokens,
-                **kwargs,
-            )
+            response = await self._client.chat.completions.create(**create_kwargs)
 
         choice = response.choices[0]
         usage = response.usage

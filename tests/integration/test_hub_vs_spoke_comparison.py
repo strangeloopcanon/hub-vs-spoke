@@ -18,14 +18,20 @@ from hub_vs_spoke.types import TokenBudget
 from tests.integration.conftest import skip_no_openai
 
 
-def _make_agents(model: str, count: int, prefix: str) -> list[Agent]:
+def _make_agents(
+    model: str,
+    count: int,
+    prefix: str,
+    *,
+    max_tokens: int = 2048,
+) -> list[Agent]:
     """Create N agents using the same model."""
     return [
         Agent(
             name=f"{prefix}-{i}",
             provider=OpenAIProvider(model=model),
             system_prompt="You are a helpful assistant. Be concise and direct.",
-            max_tokens=512,
+            max_tokens=max_tokens,
         )
         for i in range(count)
     ]
@@ -52,7 +58,7 @@ class TestHubVsSpokeComparison:
             name="hub",
             provider=OpenAIProvider(model="gpt-5-mini"),
             system_prompt="You are an orchestrator. Decompose tasks and synthesise results.",
-            max_tokens=512,
+            max_tokens=2048,
         )
         spokes = _make_agents("gpt-5-mini", 2, "spoke")
         topology = HubSpokeTopology(hub=hub, spokes=spokes)
@@ -84,7 +90,7 @@ class TestHubVsSpokeComparison:
             name="hub",
             provider=OpenAIProvider(model="gpt-5-mini"),
             system_prompt="You are an orchestrator. Decompose tasks and synthesise results.",
-            max_tokens=512,
+            max_tokens=2048,
         )
         hs_spokes = _make_agents("gpt-5-mini", 2, "hs-spoke")
         hs_topology = HubSpokeTopology(hub=hub, spokes=hs_spokes)
