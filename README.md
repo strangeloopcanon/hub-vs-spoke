@@ -4,6 +4,8 @@ Where should a task go when we can call several LLMs? We can give it to one stro
 
 The result lands fast. The market matches the solo baseline on quality, cuts cost by 21 percent, and beats hub-spoke by a wide margin on cost. Solo still wins coding. The market wins reasoning. Hub-spoke pays a large coordination bill and rarely earns it back.
 
+Read the market result as a routing result. It is not evidence that models become honest because an auction exists. The useful object is more modest: a model says how confident and costly it expects to be, the allocator watches what actually happens, and the next routing decision can use that history.
+
 ## Results
 
 The tables below use the full run in `results/hard_run.jsonl` and `results/hard_summary.csv`.
@@ -159,7 +161,7 @@ graph LR
 
 ### Agent Economy
 
-Three workers - GPT-5.2, Opus 4.6, and GPT-5-mini - bid on each task through [agent-economy](https://github.com/strangeloopcanon/agent-economy). The clearinghouse weights bid confidence by reputation, picks a winner, judges the answer, and may reopen the task after a failure. Reputation carries across the full 15-task session.
+Three workers - GPT-5.2, Opus 4.6, and GPT-5-mini - bid on each task through [agent-economy](https://github.com/strangeloopcanon/agent-economy). Here, a bid should be read plainly: a confidence and cost signal used for routing. Reputation is a session-level weight on that signal. This is not a claim that bidders would tell the truth in a full mechanism-design setting.
 
 ```mermaid
 graph LR
@@ -175,7 +177,7 @@ graph LR
     CE -->|update| R[Reputation]
 ```
 
-Each task becomes a contract. Workers bid. Reputation weights the bid. The judge checks the answer. The engine can reopen the task after a failed review.
+Each task becomes a routed contract. Workers bid, reputation weights the bid, and the judge checks the answer. The engine can reopen the task after a failed review. That is enough for a routing experiment. It is not enough to make bad self-assessment costly unless future allocation, payment, or access changes.
 
 There is also a legacy `spoke_spoke` peer-mesh topology in the codebase. The current benchmark does not use it. The tests keep it alive.
 
@@ -206,6 +208,7 @@ The rubric expects the unique solution `[[2,7,6],[9,5,1],[4,3,8]]`. A correct gr
 2. GPT-5-mini never wins a task. The three-model market behaves more like a two-model market with a spectator.
 3. `reasoning-001` drives a large share of the market's reasoning edge. Remove that task and the gap narrows.
 4. The repo stages multi-agent flows in sequence. These numbers do not show wall-clock gains from true parallel work.
+5. The benchmark does not prove that market incentives make models truthful. Models or providers only face real incentives if bad self-assessment changes future allocation, reputation, payment, or access.
 
 ## Setup
 
@@ -261,6 +264,7 @@ python scripts/run_benchmark.py --budget-tokens 30000 --budget-turns 20
 - Replace GPT-5-mini with a real rival.
 - Extend the market session to 50 tasks.
 - Track structured bids such as `{confidence, tokens, plan, risks}`.
+- Compare against a direct self-assessment router with no auction layer.
 - Route on quality per dollar.
 - Compare answers pairwise as a cross-check on absolute scores.
 
