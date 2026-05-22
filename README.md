@@ -1,10 +1,12 @@
 # Hub vs Spoke vs Market
 
-Where should a task go when we can call several LLMs? We can give it to one strong model. We can hand it to a hub that splits it into subtasks. We can post it to a market and let models bid. This repo runs all three on the same 15 tasks and counts score, passes, tokens, cost, and time.
+This repo tests three ways to route LLM work.
 
-The result lands fast. The market matches the solo baseline on quality, cuts cost by 21 percent, and beats hub-spoke by a wide margin on cost. Solo still wins coding. The market wins reasoning. Hub-spoke pays a large coordination bill and rarely earns it back.
+One option is to send every task to one strong model. One option is to use a hub that splits the task into subtasks. One option is to let models bid, then route the task to the model the market chooses.
 
-Read the market result as a routing result. It is not evidence that models become honest because an auction exists. The useful object is more modest: a model says how confident and costly it expects to be, the allocator watches what actually happens, and the next routing decision can use that history.
+The benchmark runs all three on the same 15 tasks. It measures score, pass rate, cost, tokens, and time.
+
+It does not show that auctions make models honest. It shows that model self-assessment can be useful when an allocator can observe outcomes and update future routing.
 
 ## Results
 
@@ -34,9 +36,11 @@ xychart-beta
 | Solo (Opus 4.6) | 7.2 | 73% (33/45) | $1.69 | 4.2 |
 | Hub-Spoke | 6.7 | 67% (30/45) | $5.33 | 1.3 |
 
-Across 45 full-run task results per topology, the market averages 7.2 out of 10 at $1.34. Solo averages 7.2 at $1.69. Hub-spoke drops to 6.7 at $5.33. Bootstrap 95% confidence intervals overlap: market [6.1, 8.2], solo [6.3, 8.0], hub-spoke [5.8, 7.5]. The clean top-line claim stays narrow: the market matches solo here. It does not beat it overall.
+The market does not beat solo on quality. In this run though the market got similar quality for less money.
 
-## The Split That Matters
+Bootstrap 95% confidence intervals overlap: market [6.1, 8.2], solo [6.3, 8.0], hub-spoke [5.8, 7.5].
+
+## By Task Type
 
 | Task type | Agent Economy | Solo (Opus 4.6) | Hub-Spoke |
 | --- | ---: | ---: | ---: |
@@ -44,11 +48,13 @@ Across 45 full-run task results per topology, the market averages 7.2 out of 10 
 | Reasoning | 7.1 | 5.1 | 5.2 |
 | Synthesis | 7.7 | 8.1 | 6.9 |
 
-Coding favors the solo expert. Solo posts 8.4. Hub-spoke reaches 7.9. The market trails at 6.7.
+Solo was best on coding.
 
-Reasoning favors the market. The market posts 7.1. Solo and hub-spoke both hover near 5. One task drives much of that gap: the exact-match probability problem. The market solves it in all three reps. Solo and hub-spoke miss it every time.
+The market was best on reasoning.
 
-Synthesis stays close. Solo edges the market 8.1 to 7.7. Hub-spoke trails again at 6.9.
+Synthesis was close.
+
+One reasoning task drives much of the gap. `reasoning-001` has one exact answer: `10/33`. The market got it in all three reps. Solo and hub-spoke missed it every time.
 
 <details>
 <summary>Full-run per-task scores (averaged over 3 reps)</summary>
@@ -85,7 +91,7 @@ Task wins: Agent Economy 4, Solo 4, Hub-Spoke 3, with 4 ties.
 | Medium (5 tasks) | 6.9 | 6.7 | 6.7 |
 | Hard (10 tasks) | 7.3 | 7.4 | 6.6 |
 
-Hard tasks do not break the market or solo. Both stay steady. Hub-spoke drops.
+Hard tasks did not break the market or solo. Hub-spoke dropped.
 
 </details>
 
@@ -113,19 +119,21 @@ Parallel-3-pick baseline: on 12 of 15 shadow runs, the market matches the result
 
 </details>
 
-## What the Market Learns
+## What The Market Did
 
-The market does not discover a bustling republic of specialists. It learns a much simpler rule.
+The market did not find a large set of specialists.
 
-GPT-5.2 handles most tasks. Opus 4.6 handles the harder residue. GPT-5-mini wins none. Six runs never fill. That pattern points to a gate, not an ecosystem. The market filters out the weak worker, leans on the cheaper strong worker, falls back to Opus, and sometimes drops the task.
+GPT-5.2 handled most tasks. Opus 4.6 handled some harder tasks. GPT-5-mini won none. Six market runs did not fill.
 
-The shadow checks tell the same story. On 15 routing checks, the market picks the oracle winner 12 times. Useful, yes. Precise, no.
+Most routing went to GPT-5.2 or Opus 4.6. The market did not use GPT-5-mini.
 
-## Why Hub-Spoke Pays Too Much
+## Why Hub-Spoke Costs More
 
-Hub-spoke takes the longest path through the code. The hub decomposes the task, hands subtasks to three workers, reads their answers, writes a synthesis, asks for a critique, and revises. That path spends tokens at every step and opens more room for drift, padding, and contradiction.
+Hub-spoke has more steps.
 
-Hub-spoke still steals a few tasks. It wins `coding-003`, `reasoning-002`, and `reasoning-004` in the full run. Those wins never pay the bill.
+The hub decomposes the task. Spokes answer subtasks. The hub synthesizes. A reviewer critiques. The hub revises.
+
+That path spends tokens at every stage. It also adds places for drift and padding. Hub-spoke won a few tasks, but not enough to pay for the extra coordination.
 
 ## How the Repo Runs the Test
 
@@ -133,7 +141,7 @@ Start at `scripts/run_benchmark.py`. The runner loads 15 tasks from `src/hub_vs_
 
 Each task ends the same way. The runner sends the answer to an evaluator. `reasoning-001` takes exact-match grading. The other 14 tasks go to `src/hub_vs_spoke/evaluation/judge.py`, which scores against a task rubric and marks a pass at score >= 7.
 
-One note matters. The repo stages every multi-agent flow in sequence. This benchmark measures coordination quality and cost. It does not measure true parallel speed.
+The repo stages every multi-agent flow in sequence. This benchmark measures coordination quality and cost. It does not measure parallel speed.
 
 ## The Three Topologies
 
@@ -161,7 +169,7 @@ graph LR
 
 ### Agent Economy
 
-Three workers - GPT-5.2, Opus 4.6, and GPT-5-mini - bid on each task through [agent-economy](https://github.com/strangeloopcanon/agent-economy). Here, a bid should be read plainly: a confidence and cost signal used for routing. Reputation is a session-level weight on that signal. This is not a claim that bidders would tell the truth in a full mechanism-design setting.
+Three workers - GPT-5.2, Opus 4.6, and GPT-5-mini - bid on each task through [agent-economy](https://github.com/strangeloopcanon/agent-economy). The clearinghouse weights bid confidence by reputation, picks a winner, judges the answer, and may reopen the task after a failure. Reputation carries across the full 15-task session.
 
 ```mermaid
 graph LR
@@ -177,7 +185,7 @@ graph LR
     CE -->|update| R[Reputation]
 ```
 
-Each task becomes a routed contract. Workers bid, reputation weights the bid, and the judge checks the answer. The engine can reopen the task after a failed review. That is enough for a routing experiment. It is not enough to make bad self-assessment costly unless future allocation, payment, or access changes.
+Each task is posted to the market. Workers bid. Reputation weights the bid. The judge checks the answer. The engine can reopen the task after a failed review.
 
 There is also a legacy `spoke_spoke` peer-mesh topology in the codebase. The current benchmark does not use it. The tests keep it alive.
 
@@ -208,7 +216,7 @@ The rubric expects the unique solution `[[2,7,6],[9,5,1],[4,3,8]]`. A correct gr
 2. GPT-5-mini never wins a task. The three-model market behaves more like a two-model market with a spectator.
 3. `reasoning-001` drives a large share of the market's reasoning edge. Remove that task and the gap narrows.
 4. The repo stages multi-agent flows in sequence. These numbers do not show wall-clock gains from true parallel work.
-5. The benchmark does not prove that market incentives make models truthful. Models or providers only face real incentives if bad self-assessment changes future allocation, reputation, payment, or access.
+5. Bad self-assessment only becomes costly if future allocation, reputation, payment, or access changes.
 
 ## Setup
 
@@ -257,16 +265,6 @@ python scripts/run_benchmark.py --budget-tokens 30000 --budget-turns 20
 ```
 
 </details>
-
-## Next Tests
-
-- Use an independent judge.
-- Replace GPT-5-mini with a real rival.
-- Extend the market session to 50 tasks.
-- Track structured bids such as `{confidence, tokens, plan, risks}`.
-- Compare against a direct self-assessment router with no auction layer.
-- Route on quality per dollar.
-- Compare answers pairwise as a cross-check on absolute scores.
 
 <details>
 <summary>Project map</summary>
