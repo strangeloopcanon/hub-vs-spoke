@@ -1,0 +1,10 @@
+Schedule 6 conference talks (A through F) into 3 rooms across 2 time slots (morning and afternoon). Each room holds exactly one talk per slot — so all 6 slots are filled.
+
+Constraints:
+1. Talks A and B share a speaker, so they CANNOT be in the same time slot.
+2. Talk C requires special AV equipment only available in Room 1.
+3. Talks D and E attract the same audience, so they CANNOT be in the same time slot.
+4. Talk F must be in the morning slot.
+5. Talk A must be in the afternoon slot.
+
+Provide a valid schedule as a table (Room 1/2/3 x Morning/Afternoon) and then explicitly verify that each of the 5 constraints is satisfied.

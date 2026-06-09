@@ -1,0 +1,122 @@
+[
+  {
+    "task_id": "coding-001",
+    "category": "coding",
+    "difficulty": "medium",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Code must: (1) correctly merge overlapping and adjacent intervals using a sort-then-sweep approach or equivalent O(n log n) method, (2) handle all stated edge cases (empty, single-point, fully overlapping, arbitrary order), (3) implement query() by checking raw intervals, (4) include type hints and docstrings, (5) be clean and readable. Deduct heavily for: incorrect merge logic (e.g. failing on [1,3]+[2,5] or [1,2]+[2,3]), missing edge cases, no type hints. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "coding-002",
+    "category": "coding",
+    "difficulty": "medium",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must identify the exact bug: when a repeated character is found, `start` is set to `seen[char] + 1` unconditionally, but this can move `start` BACKWARDS if the repeated character was already before the current window. On 'abba': when processing the second 'a' at index 3, seen['a']=0, so start becomes 1, but start was already at 2 from the 'b' repeat \u2014 moving it backwards to 1 corrupts the window. The fix is `start = max(start, seen[char] + 1)`. The corrected code must pass the 'abba' test case. Explanations that are vague ('the indexing is wrong') without identifying the backwards-pointer issue score low. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "coding-003",
+    "category": "coding",
+    "difficulty": "medium",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Refactored code must: (1) break the monolith into at least 3 smaller functions with clear single responsibilities (e.g. validation, discount calculation, record processing), (2) preserve identical output for any valid input \u2014 all discount thresholds, rounding, sorting, and category assignment must be unchanged, (3) use descriptive function and variable names throughout, (4) include type hints. Deduct heavily for: changing behavior (e.g. altering discount thresholds or removing the rounding), too few functions (just renaming variables is not a refactor), losing the descending sort by net_revenue, or removing the error_count tracking. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "coding-004",
+    "category": "coding",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must: (1) implement using a hash map + doubly linked list (not OrderedDict or functools), (2) achieve O(1) for both get and put, (3) correctly handle the ENTIRE test sequence above \u2014 every return value and eviction must match exactly, (4) handle the 'put updates existing key' case correctly (must update value AND move to most-recent position), (5) include type hints. The critical trap: many implementations get the eviction order wrong when put() is called on an existing key. If put(3, 30) doesn't move key 3 to the head, then put(5, 5) will evict 3 instead of 4, and the last two assertions fail. Score 1-3 if the test sequence doesn't fully pass. Score 4-6 if it passes but uses OrderedDict or has O(n) operations. Score 8-10 if it uses dict + linked list, passes all assertions, and is clean. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "coding-005",
+    "category": "coding",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Three bugs exist:\n(1) RACE ON PENDING: submit() appends to self.pending and checks length WITHOUT holding the lock. Two concurrent submit() calls can both see len >= batch_size and both call _flush(), causing items to be processed twice or futures to be resolved twice. Fix: acquire self.lock around the append + length check + flush.\n(2) RACE ON _flush(): _flush() reads and modifies self.pending and self._batch_id without the lock. Concurrent _flush() calls (from submit + run_timeout_flush) can interleave, corrupting the batch boundaries. Fix: acquire self.lock in _flush() or ensure only one caller at a time.\n(3) ORPHANED FUTURES: items added to pending that don't reach batch_size and whose timeout flush hasn't fired yet will have their futures awaited forever if no more submits arrive. The timeout loop helps but has its own race. Fix: ensure the timeout flush handles partial batches correctly, or add a drain/close method.\nMust identify all three bugs with specific explanations of the interleaving that triggers them. Identifying only 1-2 scores 3-5. Vague answers about 'concurrency issues' without naming the specific race conditions score 1-3. All three identified with clear fixes = 8-10. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "reasoning-001",
+    "category": "reasoning",
+    "difficulty": "medium",
+    "eval_method": "exact_match",
+    "expected_answer": "10/33",
+    "eval_rubric": "The correct answer is 10/33. Working: C(12,4)=495 total ways. Exactly 2 red from 5: C(5,2)=10. Remaining 2 from 7 non-red: C(7,2)=21. So 2-red draws = 210. Subtract 2-red-0-green (2 red + 2 blue): C(5,2)*C(4,2)=60. Result: (210-60)/495 = 150/495 = 10/33. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "reasoning-002",
+    "category": "reasoning",
+    "difficulty": "medium",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Schedule must: (1) place all 6 talks in exactly 6 slots (3 rooms x 2 time slots), with no talk repeated or missing, (2) A and B in different time slots, (3) C in Room 1, (4) D and E in different time slots, (5) F in morning, (6) A in afternoon. ALL constraints must be satisfied simultaneously. The verification must explicitly walk through each constraint and confirm it holds. Any single constraint violation = score of 1. A valid schedule with verification = score of 9-10. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "reasoning-003",
+    "category": "reasoning",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must identify: (a) root cause = new caching layer in v2.3.1 leaks memory (unbounded cache growth), (b) delay = cache fills gradually as user sessions accumulate \u2014 not instant, (c) amplification = cascading failure where each dead server pushes its traffic onto survivors, accelerating their memory growth and OOM, (d) design flaw = missing eviction policy (no TTL, no LRU, no max-size cap). Must connect each numbered event to the causal chain logically. Vague answers like 'the deployment caused problems' score 2-3. Precise answers that trace every step and name the missing eviction policy score 8-10. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "reasoning-004",
+    "category": "reasoning",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "The unique solution is: House 1: Alice-hamster, House 2: Carol-dog, House 3: Bob-fish, House 4: Eve-cat, House 5: Dave-parrot. Derivation: (1) Alice=H1. (8) Carol not in H2 (next to Alice). (5) Bob is directly right of Carol, so Carol-Bob pairs are (2,3),(3,4),(4,5). (8) eliminates (2,3) since Carol=H2 is next to H1. So Carol-Bob = (3,4) or (4,5). (4) Fish owner in H3. (3) Eve in even house (H2 or H4). If Carol=H4,Bob=H5: Eve=H2, Dave=H3. Dave-H3 owns fish(4). (6) Dave not parrot, ok. (7) Hamster in odd house (H1,H3,H5). H3=fish, so hamster=H1 or H5. (9) Eve not dog/fish. (10) Parrot higher than dog. (2) Dog next to cat. Test: Eve-H2=hamster? (7) H2 is even, hamster must be odd. Contradiction. Eve-H2=parrot? (10) parrot > dog, so dog in H1. (2) dog-H1 next to cat-H2. But Eve-H2=parrot, not cat. Contradiction. Eve-H2=cat? (2) dog next to cat=H2, so dog in H1 or H3. H3=fish, so dog=H1=Alice. (10) parrot higher than dog=H1. Bob-H5 or Carol-H4 gets parrot. (6) Dave not parrot but Dave=H3=fish. Hamster in odd (H1 or H5). H1=dog, so hamster=H5=Bob. (11) Bob not cat, ok. Carol-H4=parrot? (10) parrot-H4 > dog-H1, ok. But then who has what's left? All assigned: Alice-dog,Eve-cat,Dave-fish,Bob-hamster,Carol-parrot. (9) Eve not dog \u2713. Check all: all hold. Wait \u2014 try Carol=H3,Bob=H4: Carol-H3 owns fish(4). Eve in H2. Dave=H5. (7) hamster odd: H1 or H5. (9) Eve-H2 not dog/fish. (2) dog next to cat. (10) parrot > dog. (11) Bob-H4 not cat. Try Alice-H1=hamster. Remaining: dog,cat,parrot for Eve-H2,Bob-H4,Dave-H5. Eve not dog(9), so Eve=cat or parrot. If Eve=cat, dog must be next to cat-H2, so dog=H1(hamster) or H3(fish). Neither works. If Eve=parrot-H2, (10) parrot-H2 > dog, so dog in H1 \u2014 but H1=hamster. Contradiction. So Carol-Bob=(3,4) fails. Carol-Bob=(4,5): Eve=H2, Dave=H3=fish. (7) hamster odd: H1 or H5. Alice-H1=hamster works. (9) Eve not dog/fish, so Eve=cat or parrot. (2) dog next to cat. If Eve-H2=cat, dog in H1(hamster) or H3(fish) \u2014 fails. Eve-H2=parrot, (10) parrot-H2>dog, dog=H1=hamster \u2014 fails. Eve-H2=cat: already shown fails. So try Alice-H1=dog? (7) hamster=H5=Bob. (11) Bob not cat \u2713. Eve-H2: not dog/fish(9), so cat or parrot. (2) dog-H1 next to cat, so cat=H2. Eve-H2=cat. (10) parrot > dog=H1. Remaining: parrot for Carol-H4 or Dave-H3(fish). Carol-H4=parrot. (6) Dave not parrot \u2713 Dave=fish. Check all 11 constraints: all hold. SOLUTION: H1-Alice-dog, H2-Eve-cat, H3-Dave-fish, H4-Carol-parrot, H5-Bob-hamster. But wait, recheck (8): Carol-H4 next to Dave-H3 and Bob-H5. Carol NOT next to Alice-H1 \u2713. All constraints satisfied. Score 9-10 for correct final assignment with clear deductive chain. Score 5-7 for correct assignment but messy or incomplete reasoning. Score 1-4 for wrong assignment. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "reasoning-005",
+    "category": "reasoning",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "The unique solution is: [[2,7,6],[9,5,1],[4,3,8]]. Proof sketch: top-left=2, center=5. Row 1: 2+a+b=15, so a+b=13. Remaining digits {1,3,4,6,7,8,9} with pairs summing to 13: (4,9),(6,7). Main diagonal: 2+5+c=15, c=8 (bottom-right). Anti-diagonal: a+5+d=15 where a is top-right and d is bottom-left. Column 1: 2+e+d=15. Row 3: d+f+8=15. Try top-row as [2,7,6]: diag 2+5+BR=15 \u2192 BR=8. Anti-diag 6+5+BL=15 \u2192 BL=4. Col1: 2+ML+4=15 \u2192 ML=9. Row2: 9+5+MR=15 \u2192 MR=1. Col2: 7+5+3=15 \u2192 BC=3. Check row3: 4+3+8=15 \u2713. All constraints verified. For uniqueness: the other row-1 option [2,4,9] forces diag BR=8, anti-diag 9+5+BL=15 \u2192 BL=1. Col1: 2+ML+1=15 \u2192 ML=12, impossible. So [2,7,6] is forced, and every subsequent cell is determined. Must provide both a correct grid AND a uniqueness argument. Grid correct but no uniqueness proof = 5-6. Grid correct with valid proof = 8-10. Wrong grid = 1-3. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "synthesis-001",
+    "category": "synthesis",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must: (1) accurately describe all three approaches with correct technical specifics \u2014 not generic summaries (e.g., 2PC's blocking nature and coordinator SPOF; saga's temporary inconsistency window and compensation complexity; event sourcing's append-only log and projection rebuild cost), (2) address all four dimensions for each approach with substance, (3) note specific limitations relevant to 50K TPS payments (e.g., 2PC's latency penalty from synchronous coordination; saga's challenge with non-compensable operations like external transfers; CQRS read-model lag), (4) recommendation must follow logically from the analysis and reference the specific requirements. Score 1-3 if any approach is described inaccurately or if analysis is shallow. Score 7-10 if all four dimensions are treated with genuine depth and the recommendation is well-justified. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "synthesis-002",
+    "category": "synthesis",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must: (1) present 4 substantive arguments per side \u2014 not strawmen (e.g., monorepo pro: atomic cross-service refactors, single version of shared libs; polyrepo pro: independent deploy pipelines, blast-radius isolation), (2) address all four topics on BOTH sides with specifics relevant to the scenario (200 people, 15 services, 8 shared libs, 20 deploys/day), (3) show understanding of concrete trade-offs (diamond dependency problem, build-cache invalidation, trunk-based vs branch-based development), (4) recommendation must acknowledge genuine downsides of the chosen approach \u2014 not hand-wave them. Score 1-3 for one-sided or generic arguments. Score 7-10 for arguments grounded in the specific scenario that a practitioner would find credible. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "synthesis-003",
+    "category": "synthesis",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must: (1) CEO explanation uses an accessible analogy, contains zero jargon (no 'log replication', 'quorum', etc.), and explains business relevance (data safety, uptime), (2) engineer explanation correctly covers leader election (term-based, majority vote), log replication (append entries, commit on majority ack), and safety (election safety, leader completeness), (3) researcher explanation references FLP impossibility (no deterministic consensus in async systems with crash faults), explains randomized timeouts as the liveness escape hatch, and makes a specific Raft-vs-Multi-Paxos comparison (single-decree vs. multi-decree, fixed leader vs. flexible, reduced state space vs. generality), (4) the three levels must sound genuinely different in vocabulary and depth. Score 1-3 if all three levels read the same, or if the researcher level oversimplifies. Score 8-10 if each level is clearly calibrated and technically accurate for its audience. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "synthesis-004",
+    "category": "synthesis",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must: (1) address all five dimensions for each architecture with HIPAA-specific substance (not generic 'security is important' \u2014 must mention audit logging, BAAs, minimum necessary standard, encryption at rest/transit), (2) explicitly tackle the real-time-cross-department vs per-hospital-customisation tension for each option (e.g. monolith: easy cross-queries but customisation requires feature flags or multi-tenancy; microservices: per-hospital deploys are natural but cross-department views require choreography/orchestration; modular monolith: shared process makes cross-queries easy but customisation is limited to module configuration), (3) phased recommendation must have concrete trigger criteria (not 'when the team is ready' but specific metrics like team size, deployment frequency, or module coupling measurements), (4) rollback analysis must be specific to healthcare (e.g. can't just 'roll back' if patient data was written under new schema). Score 1-4 for generic architecture comparison without healthcare specifics. Score 5-7 for correct analysis but weak on the tension or vague phase triggers. Score 8-10 for healthcare-grounded analysis with concrete phase transition criteria. Length alone is not quality; verbose padding without substance should be penalized."
+  },
+  {
+    "task_id": "synthesis-005",
+    "category": "synthesis",
+    "difficulty": "hard",
+    "eval_method": "llm_judge",
+    "expected_answer": null,
+    "eval_rubric": "Must: (1) identify three genuinely distinct hidden assumptions \u2014 not restatements (good examples: assumes team boundaries align with service boundaries; assumes the org has operational maturity for distributed systems; assumes the product domain has clean bounded contexts), (2) name a real company for the monolith success case with accurate details (e.g. Shopify's modular monolith, or Stack Overflow's monolith serving massive traffic), (3) name a real company for the microservices failure case with specifics (e.g. Segment's move back to monolith, or the well-documented 'distributed monolith' anti-pattern cases), (4) decision framework must be actionable yes/no questions with clear rationale (not vague like 'are you ready?'). Score 1-3 for generic analysis without real examples or with fabricated cases. Score 4-6 for real examples but weak assumptions or vague framework. Score 8-10 for accurate real-world examples, distinct assumptions, and a framework a practitioner would actually use. Length alone is not quality; verbose padding without substance should be penalized."
+  }
+]

@@ -1,0 +1,28 @@
+Estimate the probability that you could complete this task correctly in one attempt.
+Return JSON only with fields: p_success (0..1), estimated_tokens_total (total model tokens for one full solve attempt), rationale (optional).
+
+Task ID: synthesis-004
+Title: EHR platform architecture with regulatory and scaling constraints
+Description:
+A hospital system is evaluating three architectures for their new electronic health records (EHR) platform that must serve 12 hospitals, 4,000 physicians, and meet HIPAA requirements:
+
+(a) Monolithic application with a single shared database
+(b) Microservices with per-service databases and an API gateway
+(c) Modular monolith with domain boundaries enforced by module interfaces
+
+For each architecture, analyse:
+- Data consistency and cross-domain queries (e.g. 'show all medications for patient X across all departments')
+- Compliance and audit trail requirements under HIPAA
+- Deployment and rollback risk across 12 hospitals
+- Team scaling (currently 40 developers, growing to 120 over 2 years)
+- Failure blast radius and availability
+
+Your analysis must address a specific technical tension: the platform needs both real-time cross-department patient views AND the ability for individual hospitals to customise workflows without affecting others. Explain how each architecture handles (or fails to handle) this tension.
+
+Conclude with a phased recommendation (what to build first, what to migrate to later) with explicit criteria for when to trigger each phase transition.
+
+Acceptance commands:
+- LLM_JUDGE: a GPT-5.2 judge (temperature 0) scores your single answer against a hidden rubric; pass requires score >= 7/10
+
+Strategy guidance:
+Give your direct best estimate with a concise rationale.

@@ -1,0 +1,50 @@
+Refactor the following function into clean, well-structured Python. The function currently works correctly — preserve its exact behavior while improving readability, structure, and maintainability. Break it into smaller functions with clear responsibilities.
+
+```python
+def process_sales_data(records):
+    results = []
+    total_rev = 0
+    error_count = 0
+    for r in records:
+        if not isinstance(r, dict):
+            error_count += 1
+            continue
+        if 'product' not in r or 'quantity' not in r or 'price' not in r:
+            error_count += 1
+            continue
+        try:
+            qty = int(r['quantity'])
+            price = float(r['price'])
+        except (ValueError, TypeError):
+            error_count += 1
+            continue
+        if qty <= 0 or price < 0:
+            error_count += 1
+            continue
+        revenue = qty * price
+        discount = 0.0
+        if qty >= 100:
+            discount = 0.15
+        elif qty >= 50:
+            discount = 0.10
+        elif qty >= 10:
+            discount = 0.05
+        final_revenue = revenue * (1 - discount)
+        total_rev += final_revenue
+        results.append({
+            'product': r['product'],
+            'quantity': qty,
+            'unit_price': price,
+            'gross_revenue': revenue,
+            'discount_pct': discount,
+            'net_revenue': round(final_revenue, 2),
+            'category': 'bulk' if qty >= 50 else 'standard'
+        })
+    results.sort(key=lambda x: x['net_revenue'], reverse=True)
+    return {
+        'items': results,
+        'total_revenue': round(total_rev, 2),
+        'record_count': len(results),
+        'error_count': error_count
+    }
+```

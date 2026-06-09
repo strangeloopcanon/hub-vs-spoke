@@ -1,0 +1,15 @@
+Estimate the probability that you could complete this task correctly in one attempt.
+Return JSON only with fields: p_success (0..1), estimated_tokens_total (total model tokens for one full solve attempt), rationale (optional).
+
+Task ID: reasoning-001
+Title: Combinatorial probability with multiple constraints
+Description:
+A bag contains 5 red marbles, 4 blue marbles, and 3 green marbles. You draw 4 marbles without replacement. What is the probability that you draw exactly 2 red marbles AND at least 1 green marble?
+
+Show your complete working. Express the final answer as a simplified fraction.
+
+Acceptance commands:
+- EXACT_MATCH: your final answer must contain the exact expected answer string
+
+Strategy guidance:
+Give your direct best estimate with a concise rationale.

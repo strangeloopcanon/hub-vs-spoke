@@ -1,0 +1,13 @@
+A fintech startup processing 50,000 transactions per second needs to choose a data consistency strategy for their distributed payment system. Compare these three approaches:
+
+(a) Two-phase commit (2PC)
+(b) Saga pattern with compensating transactions
+(c) Event sourcing with CQRS
+
+For each approach, analyse:
+- Transaction throughput under load
+- Consistency guarantees (and their limits)
+- Failure recovery behavior
+- Operational complexity
+
+Conclude with a specific recommendation for this use case, justified by the analysis above.

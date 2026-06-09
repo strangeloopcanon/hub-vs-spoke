@@ -1,0 +1,7 @@
+Implement a Python class `IntervalStore` that manages a collection of numeric intervals. It must support three operations:
+
+1. `add(start: float, end: float)` — stores a new interval
+2. `merge() -> list[tuple[float, float]]` — returns a new list where all overlapping or adjacent intervals have been merged
+3. `query(point: float) -> bool` — returns True if the point lies within any stored interval (checked against the raw stored intervals, not merged)
+
+Handle edge cases: empty store, single-point intervals (start == end), fully overlapping additions, and intervals added in arbitrary order. Include type hints and docstrings.

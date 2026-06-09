@@ -1,0 +1,19 @@
+Estimate the probability that you could complete this task correctly in one attempt.
+Return JSON only with fields: p_success (0..1), estimated_tokens_total (total model tokens for one full solve attempt), rationale (optional).
+
+Task ID: synthesis-003
+Title: Multi-audience technical explanation with calibrated depth
+Description:
+Explain how distributed consensus works — using Raft as the concrete example — at three levels:
+
+1. For a non-technical CEO (2-3 sentences, analogy-based, focused on why it matters for the business)
+2. For a senior backend engineer (one paragraph covering leader election, log replication, and safety guarantees)
+3. For a distributed systems researcher (one paragraph addressing the FLP impossibility result, how Raft navigates it via randomized election timeouts, and the specific trade-offs Raft makes versus Multi-Paxos in understandability vs. flexibility)
+
+Each level must be genuinely calibrated to its audience.
+
+Acceptance commands:
+- LLM_JUDGE: a GPT-5.2 judge (temperature 0) scores your single answer against a hidden rubric; pass requires score >= 7/10
+
+Strategy guidance:
+Give your direct best estimate with a concise rationale.

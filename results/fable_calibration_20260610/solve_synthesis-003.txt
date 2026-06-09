@@ -1,0 +1,7 @@
+Explain how distributed consensus works — using Raft as the concrete example — at three levels:
+
+1. For a non-technical CEO (2-3 sentences, analogy-based, focused on why it matters for the business)
+2. For a senior backend engineer (one paragraph covering leader election, log replication, and safety guarantees)
+3. For a distributed systems researcher (one paragraph addressing the FLP impossibility result, how Raft navigates it via randomized election timeouts, and the specific trade-offs Raft makes versus Multi-Paxos in understandability vs. flexibility)
+
+Each level must be genuinely calibrated to its audience.

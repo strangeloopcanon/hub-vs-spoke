@@ -135,6 +135,54 @@ The hub decomposes the task. Spokes answer subtasks. The hub synthesizes. A revi
 
 That path spends tokens at every stage. It also adds places for drift and padding. Hub-spoke won a few tasks, but not enough to pay for the extra coordination.
 
+## Follow-up: Fable 5 Self-Assessment (June 2026)
+
+Claude Fable 5 shipped on June 9, 2026. We ran a calibration probe on the same 15 tasks. One fresh agent forecast its own pass probability for each task. A second fresh agent answered the task one-shot. The same GPT-5.2 judge graded the answers with the same rubrics and the same pass bar. Forecasts, answers, and grading scripts live in `results/fable_calibration_20260610/`.
+
+| Metric | Fable 5 (solo, one-shot) |
+| --- | ---: |
+| Pass rate | 87% (13/15) |
+| Mean stated p(success) | 0.85 |
+| Brier score | 0.117 |
+| Brier excluding one harness artifact | 0.060 |
+
+For comparison: market 76%, solo Opus 4.6 73%, hub-spoke 67% on the original run. The six models in the [MarketBench](https://github.com/strangeloopcanon/agent-economy) phase-1 study scored Brier 0.156 to 0.216 on SWE-bench tasks.
+
+Three things follow for this repo's question.
+
+The market's key input got better. The original market ran on bids from models with weak calibration, so reputation and outcome history did most of the work. Fable's forecasts were spread (0.60 to 0.97), nearly unbiased (stated 0.85 vs realized 0.87), and its lowest forecasts landed on the genuine traps. Bids like that make allocation work closer to first principles.
+
+The clearest case is `reasoning-004`. Every topology failed it in the original run. Fable's forecaster gave it 0.65 and named the exact reason: the puzzle admits two valid solutions and the judge holds one. The attempt then failed as predicted. A market with that signal can decline, reprice, or escalate instead of failing silently.
+
+Solo got better too. One-shot Fable beat every topology on quality. A topology now has to win on cost, not quality. That sharpens the market's pitch rather than killing it: trustworthy self-reports are what let an allocator send easy tasks to cheap models and reserve the expensive one for tasks it flags as hard. Hub-spoke moves the other way. The better the single-context model, the more the decomposition overhead costs.
+
+Caveats: n=15 with one rep against three in the original run. The agents ran in a Cursor scaffold, not a raw API call. And this measures forecast quality, not market behavior. Nothing here shows what Fable would bid under incentives, so the honesty caveat at the top of this README stands. One of the two failures (`reasoning-001`) was a correct answer written as LaTeX, which the exact-match check misses.
+
+<details>
+<summary>Per-task forecasts and outcomes</summary>
+
+| Task | Fable p | Judge score | Pass |
+| --- | ---: | ---: | ---: |
+| coding-001 | 0.96 | 9 | yes |
+| coding-002 | 0.97 | 10 | yes |
+| coding-003 | 0.92 | 9 | yes |
+| coding-004 | 0.97 | 10 | yes |
+| coding-005 | 0.70 | 9 | yes |
+| reasoning-001 | 0.96 | 0 | no (format artifact) |
+| reasoning-002 | 0.96 | 10 | yes |
+| reasoning-003 | 0.88 | 9 | yes |
+| reasoning-004 | 0.65 | 3 | no |
+| reasoning-005 | 0.60 | 8 | yes |
+| synthesis-001 | 0.85 | 9 | yes |
+| synthesis-002 | 0.85 | 9 | yes |
+| synthesis-003 | 0.85 | 9 | yes |
+| synthesis-004 | 0.78 | 9 | yes |
+| synthesis-005 | 0.85 | 9 | yes |
+
+The low forecasts cluster on the right tasks. `reasoning-005` (0.60) has a flawed premise; the answer passed by confronting it. `coding-005` (0.70) is the hardest coding task. `reasoning-004` (0.65) failed for the reason the forecast gave.
+
+</details>
+
 ## How the Repo Runs the Test
 
 Start at `scripts/run_benchmark.py`. The runner loads 15 tasks from `src/hub_vs_spoke/tasks/`, builds three configs, and loops over reps. Solo and hub-spoke run one task at a time. The market runs the full 15-task session in one clearinghouse so reputation can carry forward.

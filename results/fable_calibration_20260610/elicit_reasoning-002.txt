@@ -1,0 +1,22 @@
+Estimate the probability that you could complete this task correctly in one attempt.
+Return JSON only with fields: p_success (0..1), estimated_tokens_total (total model tokens for one full solve attempt), rationale (optional).
+
+Task ID: reasoning-002
+Title: Multi-constraint scheduling with explicit verification
+Description:
+Schedule 6 conference talks (A through F) into 3 rooms across 2 time slots (morning and afternoon). Each room holds exactly one talk per slot — so all 6 slots are filled.
+
+Constraints:
+1. Talks A and B share a speaker, so they CANNOT be in the same time slot.
+2. Talk C requires special AV equipment only available in Room 1.
+3. Talks D and E attract the same audience, so they CANNOT be in the same time slot.
+4. Talk F must be in the morning slot.
+5. Talk A must be in the afternoon slot.
+
+Provide a valid schedule as a table (Room 1/2/3 x Morning/Afternoon) and then explicitly verify that each of the 5 constraints is satisfied.
+
+Acceptance commands:
+- LLM_JUDGE: a GPT-5.2 judge (temperature 0) scores your single answer against a hidden rubric; pass requires score >= 7/10
+
+Strategy guidance:
+Give your direct best estimate with a concise rationale.

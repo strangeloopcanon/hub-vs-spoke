@@ -1,0 +1,9 @@
+You have a 3×3 grid. Place the digits 1 through 9 (each used exactly once) in the grid so that:
+
+1. Each row sums to 15
+2. Each column sums to 15
+3. Both main diagonals sum to 15
+4. The top-left cell contains 2
+5. The center cell contains 5
+
+Provide the completed grid and prove it is the ONLY solution satisfying all five constraints. Your proof must show why no other placement works — don't just exhibit one solution.

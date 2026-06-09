@@ -1,0 +1,14 @@
+A web application experienced the following sequence of events over 4 hours:
+
+1. 2:00 PM — Deployment of version 2.3.1 (adds a new in-memory caching layer for user sessions)
+2. 2:15 PM — Monitoring shows 15%% reduction in database query latency
+3. 2:45 PM — Memory usage on app servers begins climbing steadily
+4. 3:30 PM — First out-of-memory error on server-3
+5. 3:35 PM — Load balancer removes server-3 from rotation
+6. 3:40 PM — Traffic redistributes; servers 1, 2, 4 each see ~33%% more requests
+7. 4:00 PM — server-2 hits OOM; load balancer removes it
+8. 4:15 PM — Remaining servers overwhelmed; p99 latency exceeds 10 seconds
+9. 5:00 PM — On-call engineer rolls back to version 2.3.0
+10. 5:10 PM — Memory usage drops; all servers recover within 20 minutes
+
+Trace the full causal chain from root cause to cascading failure. Identify: (a) the root cause, (b) why the impact was delayed ~45 minutes, (c) the amplification mechanism that turned one server failure into a site-wide outage, and (d) the specific design flaw in the caching layer.

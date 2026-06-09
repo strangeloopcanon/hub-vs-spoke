@@ -1,0 +1,45 @@
+{
+  "overall": {
+    "count": 15,
+    "accuracy": 0.8666666666666667,
+    "brier": 0.11722000000000002,
+    "ece": 0.1486666666666666,
+    "mean_input_tokens": 0.0,
+    "mean_output_tokens": 0.0,
+    "estimated_tokens_count": 15,
+    "mean_estimated_tokens_total": 2500.0,
+    "p50_estimated_tokens_total": 2200.0,
+    "p90_estimated_tokens_total": 5000.0,
+    "p95_estimated_tokens_total": 5299.999999999999
+  },
+  "by_model": {
+    "cursor:fable-5": {
+      "count": 15,
+      "accuracy": 0.8666666666666667,
+      "brier": 0.11722000000000002,
+      "ece": 0.1486666666666666,
+      "mean_input_tokens": 0.0,
+      "mean_output_tokens": 0.0,
+      "estimated_tokens_count": 15,
+      "mean_estimated_tokens_total": 2500.0,
+      "p50_estimated_tokens_total": 2200.0,
+      "p90_estimated_tokens_total": 5000.0,
+      "p95_estimated_tokens_total": 5299.999999999999
+    }
+  },
+  "by_model_strategy": {
+    "cursor:fable-5::direct": {
+      "count": 15,
+      "accuracy": 0.8666666666666667,
+      "brier": 0.11722000000000002,
+      "ece": 0.1486666666666666,
+      "mean_input_tokens": 0.0,
+      "mean_output_tokens": 0.0,
+      "estimated_tokens_count": 15,
+      "mean_estimated_tokens_total": 2500.0,
+      "p50_estimated_tokens_total": 2200.0,
+      "p90_estimated_tokens_total": 5000.0,
+      "p95_estimated_tokens_total": 5299.999999999999
+    }
+  }
+}

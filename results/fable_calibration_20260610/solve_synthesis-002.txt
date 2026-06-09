@@ -1,0 +1,9 @@
+A 200-person engineering organization is deciding between a monorepo (single repository for all services and libraries) and a polyrepo (one repository per service). They currently have 15 microservices, 8 shared libraries, and deploy roughly 20 times per day.
+
+Construct the strongest possible case FOR the monorepo (4 arguments), then the strongest possible case AGAINST it, i.e. for polyrepo (4 arguments). Each side must address:
+- CI/CD pipeline design
+- Code sharing and dependency management
+- Team autonomy
+- Developer onboarding
+
+Then provide a balanced recommendation that honestly acknowledges what the organization would be giving up with either choice.

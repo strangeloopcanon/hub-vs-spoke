@@ -1,0 +1,3 @@
+A bag contains 5 red marbles, 4 blue marbles, and 3 green marbles. You draw 4 marbles without replacement. What is the probability that you draw exactly 2 red marbles AND at least 1 green marble?
+
+Show your complete working. Express the final answer as a simplified fraction.

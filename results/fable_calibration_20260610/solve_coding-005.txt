@@ -1,0 +1,52 @@
+The following async Python code has three concurrency bugs. Find all three, explain each clearly, and provide the corrected version.
+
+```python
+import asyncio
+from typing import Any
+
+class AsyncBatcher:
+    '''Batches individual requests and processes them in groups.'''
+
+    def __init__(self, batch_size: int = 5, timeout: float = 1.0):
+        self.batch_size = batch_size
+        self.timeout = timeout
+        self.pending: list[tuple[Any, asyncio.Future]] = []
+        self.results: dict[int, Any] = {}
+        self.lock = asyncio.Lock()
+        self._batch_id = 0
+
+    async def submit(self, item: Any) -> Any:
+        future = asyncio.Future()
+        self.pending.append((item, future))
+
+        if len(self.pending) >= self.batch_size:
+            await self._flush()
+
+        return await future
+
+    async def _flush(self):
+        batch = self.pending[:self.batch_size]
+        self.pending = self.pending[self.batch_size:]
+        self._batch_id += 1
+        batch_id = self._batch_id
+
+        results = await self._process_batch(
+            [item for item, _ in batch]
+        )
+        self.results[batch_id] = results
+
+        for i, (_, future) in enumerate(batch):
+            future.set_result(results[i])
+
+    async def _process_batch(self, items: list) -> list:
+        await asyncio.sleep(0.1)  # simulate I/O
+        return [f'processed:{x}' for x in items]
+
+    async def run_timeout_flush(self):
+        while True:
+            await asyncio.sleep(self.timeout)
+            if self.pending:
+                await self._flush()
+```
+
+Hint: think about what happens when multiple coroutines call submit() concurrently, and what happens to futures that are added to `pending` but never make it into a batch.

@@ -1,0 +1,16 @@
+Five friends — Alice, Bob, Carol, Dave, and Eve — each own exactly one pet (cat, dog, fish, hamster, parrot) and live on the same street in houses numbered 1 through 5 from left to right.
+
+Constraints:
+1. Alice lives in house 1.
+2. The dog owner lives directly next to the cat owner.
+3. Eve lives in an even-numbered house.
+4. The fish owner lives in house 3.
+5. Bob lives immediately to the right of Carol.
+6. Dave does not own the parrot.
+7. The hamster owner lives in an odd-numbered house.
+8. Carol does not live next to Alice.
+9. Eve owns neither the dog nor the fish.
+10. The parrot owner lives in a higher-numbered house than the dog owner.
+11. Bob does not own the cat.
+
+Determine the complete assignment: who lives in which house and owns which pet. Show your deductive reasoning step by step. There is exactly one valid solution.

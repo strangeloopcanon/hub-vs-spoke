@@ -1,0 +1,21 @@
+The following Python function is supposed to find the longest substring without repeating characters, but it has a bug that causes wrong results for certain inputs. Find the bug, explain clearly why it fails, and provide the corrected version.
+
+```python
+def longest_unique_substring(s: str) -> str:
+    start = 0
+    max_start = 0
+    max_len = 0
+    seen = {}
+    
+    for end, char in enumerate(s):
+        if char in seen:
+            start = seen[char] + 1
+        seen[char] = end
+        if end - start + 1 > max_len:
+            max_len = end - start + 1
+            max_start = start
+    
+    return s[max_start:max_start + max_len]
+```
+
+Failing test case: `longest_unique_substring('abba')` returns `'bba'` (length 3) instead of the correct `'ab'` or `'ba'` (length 2).
