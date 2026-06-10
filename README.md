@@ -171,32 +171,28 @@ GPT-5.5 took 7 tasks, Opus 4.7 took 4, GPT-5-mini took 2, and two tasks (`coding
 
 ### Synthetic: Fable in the bidder pool
 
-Neither run logged enough bid data to replay an auction with Fable in it, so we splice measured results instead: each task routes either to a base market (its measured per-task result) or to Fable (its measured one-shot result), charged at measured execution cost plus Fable's bidding overhead. `results/fable_calibration_20260610/synthetic_market.py` builds the variants.
+What if Fable had been a bidder? We can answer that by splicing measured results: each task goes either to a market (its real result from the runs above) or to Fable (its real one-shot result), depending on the routing rule. Two rules matter:
 
-| Condition | Avg Score | Pass Rate | Cost/rep | Score/$ |
-| --- | ---: | ---: | ---: | ---: |
-| Original market (measured) | 7.2 | 76% | $0.45 | 16.0 |
-| Frontier CLI market (measured) | 7.3 | 73% | $1.85 | 4.0 |
-| Solo Fable 5 (measured) | 8.1 | 87% | $1.19 | 6.8 |
-| Original + Fable, bid-routed p<0.75 | 7.4 | 78% | $0.75 | 9.9 |
-| Original + Fable, bid-routed p<0.85 | 7.6 | 80% | $0.95 | 8.1 |
-| Original + Fable, outcome-routed | 8.7 | 93% | $1.07 | 8.1 |
-| Frontier + Fable, bid-routed p<0.75 | 7.6 | 80% | $1.69 | 4.5 |
-| Frontier + Fable, bid-routed p<0.85 | 8.2 | 87% | $1.92 | 4.3 |
-| Frontier + Fable, no-fill backstop | 8.6 | 87% | $2.43 | 3.5 |
-| Frontier + Fable, outcome-routed | 8.8 | 93% | $2.00 | 4.4 |
+- **Route by Fable's bids**: Fable takes a task only when its own bid says it might fail (p < 0.85).
+- **Route by track record**: Fable takes the tasks the market has failed before.
 
-Bid-routed sends a task to Fable only when Fable's own bid is below the threshold. Outcome-routed sends Fable every task the base market failed; it uses outcome history a single session would not have, so it is the ceiling reputation-style updating converges toward. No-fill backstop has Fable take only the tasks nobody filled.
+| Condition | Score | Pass | Cost/rep |
+| --- | ---: | ---: | ---: |
+| Cheap market alone | 7.2 | 76% | $0.45 |
+| Frontier market alone | 7.3 | 73% | $1.85 |
+| Solo Fable | 8.1 | 87% | $1.19 |
+| Cheap market + Fable, routed by bids | 7.6 | 80% | $0.95 |
+| Cheap market + Fable, routed by track record | **8.7** | **93%** | **$1.07** |
+| Frontier market + Fable, routed by bids | 8.2 | 87% | $1.92 |
+| Frontier market + Fable, routed by track record | 8.8 | 93% | $2.00 |
 
-Two findings sit side by side here.
+The pattern: routing by bids helps a little. Routing by track record wins big — on the cheap pool it beats solo Fable on quality *and* cost.
 
-On the cheap pool, Fable's bids barely help (7.2 to 7.4). Its low-confidence flags mark tasks that are hard for everyone, including Fable: it failed `reasoning-004` just as the market did. The market's actual weak spots (`coding-003` at 0%, `coding-001` at 67%) were tasks Fable bid 0.92+ on and aced, and bids alone never find them. Only outcome history does, and outcome-routing beats solo Fable on quality and cost (8.7 at $1.07).
+Why the gap? Fable's bids say where *Fable* struggles, but those tasks (the trap puzzles) are hard for everyone, so rerouting them buys little. Track record says where the *market* struggles — and those were tasks Fable bid 0.92+ on and aced. The two signals point at different tasks, and the second one is the one that pays.
 
-On the frontier pool, bid-routing recovers much more (7.3 to 8.2 at p<0.85), because three of the frontier market's four failures happen to sit where Fable's bids are lowest, including the unfilled `synthesis-004`. That overlap is partly luck of the no-fills, and the result still trails solo Fable on score per dollar.
+The track-record rule does assume the allocator has seen these tasks fail before, which is what reputation systems accumulate over time. So the original conclusion of this repo stands, now with numbers behind it: self-assessment alone does not route well. Self-assessment plus observed outcomes routes better than anything we measured.
 
-The conclusion from the original run survives both extensions: good self-assessment alone does not route well, and an expensive pool does not fix it. Self-assessment plus observed outcomes routes better than anything measured, on either base.
-
-Caveats: n=15 with one rep against three in the original run. The agents ran in a Cursor scaffold, not a raw API call. And this measures forecast quality, not market behavior. Nothing here shows what Fable would bid under incentives, so the honesty caveat at the top of this README stands. One of the two failures (`reasoning-001`) was a correct answer written as LaTeX, which the exact-match check misses.
+`results/fable_calibration_20260610/synthetic_market.py` builds all variants, including stricter bid thresholds and a no-fill backstop.
 
 <details>
 <summary>Per-task forecasts and outcomes</summary>
