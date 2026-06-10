@@ -29,6 +29,7 @@ from agent_economy.schemas import (
 )
 from agent_economy.state import replay_ledger
 
+from hub_vs_spoke.providers.cli_router import CliCapableRouter
 from hub_vs_spoke.tasks.base import Task
 from hub_vs_spoke.types import (
     CostRecord,
@@ -41,7 +42,7 @@ from hub_vs_spoke.types import (
 logger = structlog.get_logger()
 
 
-def _build_llm_router() -> LLMRouter:
+def _build_llm_router() -> CliCapableRouter:
     """Construct an LLMRouter from environment API keys."""
     openai_key = os.getenv("OPENAI_API_KEY")
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
@@ -56,11 +57,13 @@ def _build_llm_router() -> LLMRouter:
         if anthropic_key
         else None
     )
-    return LLMRouter(openai=openai_client, anthropic=anthropic_client)
+    return CliCapableRouter(
+        delegate=LLMRouter(openai=openai_client, anthropic=anthropic_client)
+    )
 
 
 def _our_task_to_ae_spec(
-    task: Task, *, judge_workers: list[str],
+    task: Task, *, judge_workers: list[str], judge_include_self: bool = True
 ) -> TaskSpec:
     """Convert a hub_vs_spoke Task to an agent-economy TaskSpec."""
     return TaskSpec(
@@ -71,7 +74,11 @@ def _our_task_to_ae_spec(
         max_attempts=3,
         verify_mode=VerifyMode.JUDGES,
         submission_kind=SubmissionKind.TEXT,
-        judges=JudgeSpec(workers=judge_workers, min_passes=1),
+        judges=JudgeSpec(
+            workers=judge_workers,
+            min_passes=1,
+            include_self=judge_include_self,
+        ),
     )
 
 
@@ -86,6 +93,80 @@ def _read_submission_text(run_dir: Path, event: dict[str, Any]) -> str:
             if full.exists():
                 return full.read_text(encoding="utf-8").strip()
     return ""
+
+
+def _pricing_model_name(model_ref: str) -> str:
+    """Map provider-qualified model refs to pricing-table model names."""
+    return model_ref.split(":", 1)[-1] if ":" in model_ref else model_ref
+
+
+def _usage_from_raw(raw: dict[str, Any] | None) -> Usage:
+    """Convert an agent-economy llm_usage payload to hub_vs_spoke Usage."""
+    data = raw or {}
+    return Usage(
+        input_tokens=int(data.get("input_tokens", 0) or 0),
+        output_tokens=int(data.get("output_tokens", 0) or 0),
+    )
+
+
+def _session_usage_summary(
+    events: list[Any],
+    *,
+    worker_model_refs: dict[str, str],
+) -> dict[str, Any]:
+    """Summarise market-session model usage across bids and executions."""
+    total_tokens = 0
+    total_cost = 0.0
+    by_model: dict[str, dict[str, Any]] = {}
+
+    for ev in events:
+        etype = ev.type if hasattr(ev, "type") else ev.get("type")
+        if etype not in {EventType.BID_SUBMITTED, EventType.PATCH_SUBMITTED}:
+            continue
+
+        payload = ev.payload if hasattr(ev, "payload") else ev.get("payload", {})
+        if not isinstance(payload, dict):
+            continue
+
+        usage = _usage_from_raw(payload.get("llm_usage"))
+        if usage.total_tokens <= 0:
+            continue
+
+        model_ref = str(payload.get("model_ref") or "")
+        if not model_ref:
+            worker_id = str(payload.get("worker_id") or "")
+            model_ref = worker_model_refs.get(worker_id, worker_id)
+        model_name = _pricing_model_name(model_ref)
+        cost = CostRecord.from_usage(model_name, usage).total_cost_usd
+
+        total_tokens += usage.total_tokens
+        total_cost += cost
+
+        bucket = by_model.setdefault(
+            model_name,
+            {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0,
+            },
+        )
+        bucket["input_tokens"] += usage.input_tokens
+        bucket["output_tokens"] += usage.output_tokens
+        bucket["total_tokens"] += usage.total_tokens
+        bucket["cost_usd"] += cost
+
+    return {
+        "total_tokens": total_tokens,
+        "total_cost_usd": round(total_cost, 6),
+        "by_model": {
+            model: {
+                **data,
+                "cost_usd": round(float(data["cost_usd"]), 6),
+            }
+            for model, data in sorted(by_model.items())
+        },
+    }
 
 
 def _extract_results_from_ledger(
@@ -193,6 +274,7 @@ class MarketTopology:
         worker_configs: list[tuple[str, str]],
         *,
         judge_workers: list[str] | None = None,
+        judge_include_self: bool = True,
     ) -> None:
         """Initialise the market topology.
 
@@ -203,6 +285,7 @@ class MarketTopology:
         """
         self._worker_configs = worker_configs
         self._judge_workers = judge_workers or [worker_configs[0][0]]
+        self._judge_include_self = bool(judge_include_self)
 
     @property
     def name(self) -> str:
@@ -248,7 +331,11 @@ class MarketTopology:
             for wid, mref in self._worker_configs
         ]
         task_specs = [
-            _our_task_to_ae_spec(t, judge_workers=self._judge_workers)
+            _our_task_to_ae_spec(
+                t,
+                judge_workers=self._judge_workers,
+                judge_include_self=self._judge_include_self,
+            )
             for t in tasks
         ]
 
@@ -276,7 +363,10 @@ class MarketTopology:
             workspace_dir=workspace_dir,
             run_dir=run_dir,
             workers=workers,
-            settings=ExecutorSettings(judge_workers=self._judge_workers),
+            settings=ExecutorSettings(
+                judge_workers=self._judge_workers,
+                judge_include_self=self._judge_include_self,
+            ),
         )
 
         # Run engine rounds
@@ -303,6 +393,10 @@ class MarketTopology:
         events = list(ledger.iter_events())
         state = replay_ledger(events=events)
         task_data = _extract_results_from_ledger(events, run_dir)
+        session_usage = _session_usage_summary(
+            events,
+            worker_model_refs=dict(self._worker_configs),
+        )
 
         # Build reputation snapshot
         reputations = {
@@ -347,6 +441,9 @@ class MarketTopology:
                 "market_bids": td.get("bids", []),
                 "market_attempts": td.get("attempts", 0),
                 "market_reputation": reputations,
+                "market_session_total_tokens": session_usage["total_tokens"],
+                "market_session_total_cost_usd": session_usage["total_cost_usd"],
+                "market_session_usage_by_model": session_usage["by_model"],
             }
 
             results.append(TopologyResult(

@@ -99,6 +99,7 @@ class AgentResponse(BaseModel):
 # Pricing per 1M tokens (input, output) in USD — as of February 2026.
 MODEL_PRICING: dict[str, tuple[float, float]] = {
     # OpenAI — current generation
+    "gpt-5.5": (5.00, 30.00),
     "gpt-5.2": (1.75, 14.00),
     "gpt-5": (1.25, 10.00),
     "gpt-5-mini": (0.25, 2.00),
@@ -107,6 +108,7 @@ MODEL_PRICING: dict[str, tuple[float, float]] = {
     "gpt-4.1-nano": (0.10, 0.40),
     "o4-mini": (1.10, 4.40),
     # Anthropic — current generation
+    "claude-opus-4-7": (5.00, 25.00),
     "claude-opus-4-6": (5.00, 25.00),
     "claude-opus-4-5": (5.00, 25.00),
     "claude-sonnet-4-5": (3.00, 15.00),

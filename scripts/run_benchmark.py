@@ -56,6 +56,9 @@ class TopologyConfig:
     topology_type: str  # "solo", "hub-spoke", "market"
     hub_model: str | None
     spoke_models: list[str] = field(default_factory=list)
+    collect_shadow: bool = True
+    judge_model: str | None = None
+    judge_include_self: bool = True
 
 
 DEFAULT_CONFIGS: list[TopologyConfig] = [
@@ -67,6 +70,13 @@ DEFAULT_CONFIGS: list[TopologyConfig] = [
     TopologyConfig(
         "agent-economy", "market", None,
         ["gpt-5.2", "claude-opus-4-6", "gpt-5-mini"],
+    ),
+    TopologyConfig(
+        "frontier-cli-market", "market", None,
+        ["codex:gpt-5.5", "cursor:claude-opus-4-7-thinking-high", "gpt-5-mini"],
+        collect_shadow=False,
+        judge_model="codex:gpt-5.5",
+        judge_include_self=False,
     ),
 ]
 
@@ -122,20 +132,39 @@ def _build_topology(config: TopologyConfig) -> SoloTopology | HubSpokeTopology:
 def _build_market_topology(config: TopologyConfig) -> MarketTopology:
     """Build a MarketTopology from config."""
     # Map model names to agent-economy model_ref format.
-    # Anthropic models need 'claude:' prefix for LLMRouter routing.
+    # Anthropic API models need 'claude:' prefix for LLMRouter routing.
     worker_configs: list[tuple[str, str]] = []
     for model in config.spoke_models:
         if model.startswith("claude"):
             worker_configs.append((model, f"claude:{model}"))
+        elif ":" in model:
+            provider, raw_model = model.split(":", 1)
+            worker_id = f"{provider}-{raw_model}"
+            worker_configs.append((worker_id, model))
         else:
             worker_configs.append((model, model))
 
-    # Use first OpenAI model as judge (cheapest capable model).
-    judge_workers = [wc[0] for wc in worker_configs if not wc[0].startswith("claude")]
+    if config.judge_model is not None:
+        judge_workers = [
+            worker_id
+            for worker_id, model_ref in worker_configs
+            if model_ref == config.judge_model
+        ]
+    else:
+        # Use the first API-backed OpenAI model as judge by default.
+        judge_workers = [
+            worker_id
+            for worker_id, model_ref in worker_configs
+            if ":" not in model_ref and not model_ref.startswith("claude:")
+        ]
     if not judge_workers:
         judge_workers = [worker_configs[0][0]]
 
-    return MarketTopology(worker_configs, judge_workers=judge_workers[:1])
+    return MarketTopology(
+        worker_configs,
+        judge_workers=judge_workers[:1],
+        judge_include_self=config.judge_include_self,
+    )
 
 
 _judge: LLMJudge | None = None
@@ -277,8 +306,16 @@ def _result_to_jsonl(
 
     # Market-specific metadata
     if result.metadata:
-        for key in ("market_winner", "market_bids", "market_attempts",
-                     "market_reputation", "shadow_answers"):
+        for key in (
+            "market_winner",
+            "market_bids",
+            "market_attempts",
+            "market_reputation",
+            "market_session_total_tokens",
+            "market_session_total_cost_usd",
+            "market_session_usage_by_model",
+            "shadow_answers",
+        ):
             if key in result.metadata:
                 row[key] = result.metadata[key]
 
@@ -481,7 +518,11 @@ async def _run_market_config(
             market_results[task.task_id] = result
 
         # Collect shadow counterfactuals
-        shadow_tasks = [t for t in all_tasks if t.task_id in SHADOW_TASK_IDS]
+        shadow_tasks = (
+            [t for t in all_tasks if t.task_id in SHADOW_TASK_IDS]
+            if config.collect_shadow
+            else []
+        )
         shadow_data: dict[str, list[dict[str, Any]]] = {}
         if shadow_tasks:
             logger.info("shadow_collection_start", count=len(shadow_tasks))
@@ -553,7 +594,7 @@ def _print_summary(
         n = len(rows)
         passed = sum(1 for r in rows if r["eval_match"])
         avg_score = sum(r.get("eval_score", 0) for r in rows) / n
-        total_cost = sum(r.get("total_cost_usd", 0) for r in rows)
+        total_cost = _summary_cost_usd(rows)
         avg_tok = sum(r["total_tokens"] for r in rows) / n
         avg_ms = sum(r["wall_time_ms"] for r in rows) / n
         print(fmt.format(
@@ -577,6 +618,19 @@ def _print_summary(
         print(cat_fmt.format(cat, n, passed, f"{passed / n:.0%}", f"{avg_score:.1f}"))
 
     print("=" * 90)
+
+
+def _summary_cost_usd(rows: list[dict[str, Any]]) -> float:
+    """Return total run cost, using market session totals when present."""
+    session_costs: dict[tuple[str, int], float] = {}
+    for row in rows:
+        if "market_session_total_cost_usd" not in row:
+            continue
+        key = (str(row.get("config_label", "")), int(row.get("repetition", 0)))
+        session_costs[key] = float(row.get("market_session_total_cost_usd") or 0.0)
+    if session_costs:
+        return sum(session_costs.values())
+    return sum(float(r.get("total_cost_usd", 0.0) or 0.0) for r in rows)
 
 
 # ---------------------------------------------------------------------------
@@ -636,16 +690,29 @@ def main() -> None:
                         label = f"  {config.label} / {cat.value} / {task.task_id}"
                         if config.topology_type == "market":
                             label += " [market-session]"
-                        if task.task_id in SHADOW_TASK_IDS and config.topology_type == "market":
+                        if (
+                            config.collect_shadow
+                            and task.task_id in SHADOW_TASK_IDS
+                            and config.topology_type == "market"
+                        ):
                             label += " [+shadow]"
                         print(f"{label} / rep{rep}")
         print(f"\nTotal task-runs: {total}")
         shadow_count = sum(
-            1 for c in configs if c.topology_type == "market"
+            1
+            for c in configs
+            if c.topology_type == "market" and c.collect_shadow
         ) * len(SHADOW_TASK_IDS) * args.reps
         if shadow_count:
-            n_losers = len(DEFAULT_CONFIGS[-1].spoke_models) - 1
-            print(f"Shadow counterfactuals: {shadow_count} tasks x {n_losers} non-winner models")
+            max_losers = max(
+                len(c.spoke_models) - 1
+                for c in configs
+                if c.topology_type == "market" and c.collect_shadow
+            )
+            print(
+                "Shadow counterfactuals: "
+                f"{shadow_count} tasks x up to {max_losers} non-winner models"
+            )
         return
 
     output_path = Path(args.output)
