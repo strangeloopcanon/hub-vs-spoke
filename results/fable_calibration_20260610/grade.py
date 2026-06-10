@@ -1,6 +1,7 @@
 """Grade Fable's one-shot answers with the repo's own evaluation stack:
 GPT-5.2 judge (temperature 0, same rubric, pass = score >= 7) for llm_judge
 tasks, DeterministicEvaluator.exact_match for exact_match tasks."""
+# ruff: noqa: E402
 from __future__ import annotations
 
 import asyncio

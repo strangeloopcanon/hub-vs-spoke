@@ -53,7 +53,7 @@ def fable_task_cost(tid: str) -> float:
 
 
 def load_bases() -> dict[str, dict[str, dict]]:
-    rows = [json.loads(l) for l in (HVS / "results/hard_run.jsonl").open()]
+    rows = [json.loads(line) for line in (HVS / "results/hard_run.jsonl").open()]
     by_task = defaultdict(list)
     for r in rows:
         if r["config_label"] == "agent-economy":
@@ -68,8 +68,8 @@ def load_bases() -> dict[str, dict[str, dict]]:
         for tid, rs in by_task.items()
     }
     frows = [
-        json.loads(l)
-        for l in (HVS / "results/frontier_cli_market_20260610_corrected.jsonl").open()
+        json.loads(line)
+        for line in (HVS / "results/frontier_cli_market_20260610_corrected.jsonl").open()
     ]
     frontier = {
         r["task_id"]: {
@@ -96,7 +96,9 @@ def main() -> None:
     bases = load_bases()
 
     def splice(base: dict[str, dict], to_fable: set[str]) -> dict:
-        pick = lambda t: fable[t] if t in to_fable else base[t]
+        def pick(task_id: str) -> dict:
+            return fable[task_id] if task_id in to_fable else base[task_id]
+
         score = mean(pick(t)["score"] for t in FABLE_P)
         cost = sum(pick(t)["cost"] for t in FABLE_P) + BID_OVERHEAD
         return {

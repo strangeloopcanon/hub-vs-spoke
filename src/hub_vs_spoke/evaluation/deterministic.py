@@ -11,6 +11,12 @@ import tempfile
 from dataclasses import dataclass
 from typing import Any
 
+_NUMERIC_TYPES = int | float
+_UNARY_ARITHMETIC_OPS = ast.UAdd | ast.USub
+_BINARY_ARITHMETIC_OPS = (
+    ast.Add | ast.Sub | ast.Mult | ast.Div | ast.FloorDiv | ast.Mod | ast.Pow
+)
+
 
 class DeterministicEvaluator:
     """Evaluate outputs using deterministic (non-LLM) methods."""
@@ -449,7 +455,7 @@ def _match_value(actual: Any, expectation: Any) -> bool:
             except (TypeError, ValueError):
                 return False
 
-            if isinstance(actual, (int, float)):
+            if isinstance(actual, _NUMERIC_TYPES):
                 return abs(float(actual) - target_num) < 1e-6
             if isinstance(actual, str):
                 evaluated = _safe_eval_arithmetic(actual)
@@ -481,14 +487,12 @@ def _safe_eval_arithmetic(expr: str) -> float | None:
     def _eval(n: ast.AST) -> float:
         if isinstance(n, ast.Expression):
             return _eval(n.body)
-        if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)):
+        if isinstance(n, ast.Constant) and isinstance(n.value, _NUMERIC_TYPES):
             return float(n.value)
-        if isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.UAdd, ast.USub)):
+        if isinstance(n, ast.UnaryOp) and isinstance(n.op, _UNARY_ARITHMETIC_OPS):
             v = _eval(n.operand)
             return v if isinstance(n.op, ast.UAdd) else -v
-        if isinstance(n, ast.BinOp) and isinstance(
-            n.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow)
-        ):
+        if isinstance(n, ast.BinOp) and isinstance(n.op, _BINARY_ARITHMETIC_OPS):
             left = _eval(n.left)
             right = _eval(n.right)
             if isinstance(n.op, ast.Add):

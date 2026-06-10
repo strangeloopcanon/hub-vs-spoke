@@ -4,6 +4,7 @@ the 15 hub_vs_spoke benchmark tasks, for elicitation/solving by Fable 5 subagent
 Uses agent-economy's build_calibration_prompt verbatim so the elicitation format
 matches the phase-1 MarketBench experiment exactly.
 """
+# ruff: noqa: E402,I001
 from __future__ import annotations
 
 import json
@@ -15,10 +16,10 @@ AE_ROOT = Path("/Users/rohit/Documents/Workspace/Coding/agent-economy")
 sys.path.insert(0, str(HVS_ROOT / "src"))
 sys.path.insert(0, str(AE_ROOT))
 
-from agent_economy.research.calibration import PromptStrategy, build_calibration_prompt
 import hub_vs_spoke.tasks.coding  # noqa: F401  (populates registry)
 import hub_vs_spoke.tasks.reasoning  # noqa: F401
 import hub_vs_spoke.tasks.synthesis  # noqa: F401
+from agent_economy.research.calibration import PromptStrategy, build_calibration_prompt
 from hub_vs_spoke.tasks.base import EvalMethod, default_registry
 
 OUT_DIR = Path(__file__).resolve().parent

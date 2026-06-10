@@ -1,5 +1,6 @@
 """Join Fable's forecasts with graded outcomes; compute Brier/ECE via
 agent-economy's summarize_calibration; compare against hard_run baselines."""
+# ruff: noqa: E402
 from __future__ import annotations
 
 import json
@@ -12,10 +13,7 @@ HVS_ROOT = Path("/Users/rohit/Documents/Workspace/Coding/hub_vs_spoke")
 AE_ROOT = Path("/Users/rohit/Documents/Workspace/Coding/agent-economy")
 sys.path.insert(0, str(AE_ROOT))
 
-from agent_economy.research.calibration_metrics import (
-    reliability_bins,
-    summarize_calibration,
-)
+from agent_economy.research.calibration_metrics import summarize_calibration
 
 OUT_DIR = Path(__file__).resolve().parent
 
@@ -41,7 +39,7 @@ FORECASTS = {
 def main() -> None:
     grades = {
         r["task_id"]: r
-        for r in (json.loads(l) for l in (OUT_DIR / "grades.jsonl").open())
+        for r in (json.loads(line) for line in (OUT_DIR / "grades.jsonl").open())
     }
     records = []
     for tid, (p, tok) in FORECASTS.items():
@@ -65,11 +63,10 @@ def main() -> None:
             f.write(json.dumps(r) + "\n")
 
     summary = summarize_calibration(records)
-    bins = reliability_bins(records)
     (OUT_DIR / "metrics_summary.json").write_text(json.dumps(summary, indent=2))
 
     # Baseline per-task pass rates from the original hard run.
-    base = [json.loads(l) for l in (HVS_ROOT / "results/hard_run.jsonl").open()]
+    base = [json.loads(line) for line in (HVS_ROOT / "results/hard_run.jsonl").open()]
     by_cond_task: dict[str, dict[str, list[int]]] = defaultdict(lambda: defaultdict(list))
     for r in base:
         by_cond_task[r["config_label"]][r["task_id"]].append(int(r["eval_match"]))
@@ -81,7 +78,8 @@ def main() -> None:
     print()
     for r in sorted(records, key=lambda x: x["task_id"]):
         print(
-            f"{r['task_id']:16s} {r['p_success']:>7.2f} {r['eval_score']:>5.1f} {r['outcome']:>3d}",
+            f"{r['task_id']:16s} {r['p_success']:>7.2f} "
+            f"{r['eval_score']:>5.1f} {r['outcome']:>3d}",
             end="",
         )
         for c in conds:
@@ -97,7 +95,6 @@ def main() -> None:
     print(f"Fable Brier:        {overall['brier']:.4f}")
     print(f"Fable ECE:          {overall['ece']:.4f}")
     base_rate = overall["accuracy"]
-    base_brier = mean((r["p_success"] - base_rate) ** 2 + 0 for r in records)
     # Brier skill vs always-guessing-own-base-rate
     ref = base_rate * (1 - base_rate)
     print(f"Brier skill vs base-rate forecaster: {1 - overall['brier'] / ref:+.3f}")
