@@ -1,59 +1,111 @@
 {
   "references": {
-    "market (original)": {
+    "original market (measured)": {
       "avg_score": 7.18,
       "pass_rate": 0.756,
       "cost_per_rep": 0.45,
       "score_per_usd": 16.0
     },
-    "solo Fable (measured)": {
+    "frontier market (measured)": {
+      "avg_score": 7.33,
+      "pass_rate": 0.733,
+      "cost_per_rep": 1.85,
+      "score_per_usd": 4.0
+    },
+    "solo Fable 5 (measured)": {
       "avg_score": 8.13,
       "pass_rate": 0.867,
       "cost_per_rep": 1.19,
       "score_per_usd": 6.8
     }
   },
-  "variants": [
-    {
-      "variant": "A bid-routed p<0.75",
-      "fable_tasks": [
-        "coding-005",
-        "reasoning-004",
-        "reasoning-005"
-      ],
-      "avg_score": 7.44,
-      "pass_rate": 0.778,
-      "cost_per_rep": 0.75,
-      "score_per_usd": 9.9
+  "variants": {
+    "original": {
+      "bid-routed p<0.75": {
+        "fable_tasks": [
+          "coding-005",
+          "reasoning-004",
+          "reasoning-005"
+        ],
+        "avg_score": 7.44,
+        "pass_rate": 0.778,
+        "cost_per_rep": 0.75,
+        "score_per_usd": 9.9
+      },
+      "bid-routed p<0.85": {
+        "fable_tasks": [
+          "coding-005",
+          "reasoning-004",
+          "reasoning-005",
+          "synthesis-004"
+        ],
+        "avg_score": 7.64,
+        "pass_rate": 0.8,
+        "cost_per_rep": 0.95,
+        "score_per_usd": 8.1
+      },
+      "outcome-routed": {
+        "fable_tasks": [
+          "coding-001",
+          "coding-003",
+          "coding-005",
+          "reasoning-002",
+          "reasoning-004",
+          "synthesis-004",
+          "synthesis-005"
+        ],
+        "avg_score": 8.69,
+        "pass_rate": 0.933,
+        "cost_per_rep": 1.07,
+        "score_per_usd": 8.1
+      }
     },
-    {
-      "variant": "B bid-routed p<0.85",
-      "fable_tasks": [
-        "coding-005",
-        "reasoning-004",
-        "reasoning-005",
-        "synthesis-004"
-      ],
-      "avg_score": 7.64,
-      "pass_rate": 0.8,
-      "cost_per_rep": 0.95,
-      "score_per_usd": 8.1
-    },
-    {
-      "variant": "C outcome-history",
-      "fable_tasks": [
-        "coding-001",
-        "coding-003",
-        "coding-005",
-        "reasoning-002",
-        "reasoning-004",
-        "synthesis-004",
-        "synthesis-005"
-      ],
-      "avg_score": 8.69,
-      "pass_rate": 0.933,
-      "cost_per_rep": 1.07,
-      "score_per_usd": 8.1
+    "frontier": {
+      "bid-routed p<0.75": {
+        "fable_tasks": [
+          "coding-005",
+          "reasoning-004",
+          "reasoning-005"
+        ],
+        "avg_score": 7.6,
+        "pass_rate": 0.8,
+        "cost_per_rep": 1.69,
+        "score_per_usd": 4.5
+      },
+      "bid-routed p<0.85": {
+        "fable_tasks": [
+          "coding-005",
+          "reasoning-004",
+          "reasoning-005",
+          "synthesis-004"
+        ],
+        "avg_score": 8.2,
+        "pass_rate": 0.867,
+        "cost_per_rep": 1.92,
+        "score_per_usd": 4.3
+      },
+      "outcome-routed": {
+        "fable_tasks": [
+          "coding-004",
+          "reasoning-004",
+          "reasoning-005",
+          "synthesis-004"
+        ],
+        "avg_score": 8.8,
+        "pass_rate": 0.933,
+        "cost_per_rep": 2.0,
+        "score_per_usd": 4.4
+      },
+      "no-fill backstop": {
+        "fable_tasks": [
+          "coding-004",
+          "synthesis-004"
+        ],
+        "avg_score": 8.6,
+        "pass_rate": 0.867,
+        "cost_per_rep": 2.43,
+        "score_per_usd": 3.5
+      }
     }
-  ]
+  }
 }

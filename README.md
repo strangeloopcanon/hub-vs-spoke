@@ -156,22 +156,45 @@ The clearest case is `reasoning-004`. Every topology failed it in the original r
 
 Solo got better too. One-shot Fable beat every topology on quality. A topology now has to win on cost, not quality. That sharpens the market's pitch rather than killing it: trustworthy self-reports are what let an allocator send easy tasks to cheap models and reserve the expensive one for tasks it flags as hard. Hub-spoke moves the other way. The better the single-context model, the more the decomposition overhead costs.
 
+### The frontier CLI market (measured, one rep)
+
+A follow-up run put frontier coding agents in the bidder pool: Opus 4.7-thinking via the Cursor CLI, GPT-5.5 via Codex, and GPT-5-mini, with `judge_include_self=False`. One rep over the same 15 tasks (`results/frontier_cli_market_20260610_corrected.jsonl`):
+
+| Metric | Result |
+| --- | ---: |
+| Pass rate | 73% (11/15) |
+| Avg score | 7.33 |
+| Execution cost | $1.85 |
+| Full session cost (incl. all bid calls) | $7.82 |
+
+GPT-5.5 took 7 tasks, Opus 4.7 took 4, GPT-5-mini took 2, and two tasks (`coding-004`, `synthesis-004`) went unfilled and scored 0. The expensive pool did not pay for itself: quality landed at the original market's level for 4x the execution cost, and below solo Fable. Two of its four failures were allocation failures (no fill), not capability failures.
+
 ### Synthetic: Fable in the bidder pool
 
-The original run logged no bid-level data, so we cannot replay the auction. We can splice the two datasets instead: route each task either to the original market (its measured per-task results, averaged over 3 reps) or to Fable (its measured one-shot result), and charge each side its measured cost plus Fable's bidding overhead. `results/fable_calibration_20260610/synthetic_market.py` builds three routing rules.
+Neither run logged enough bid data to replay an auction with Fable in it, so we splice measured results instead: each task routes either to a base market (its measured per-task result) or to Fable (its measured one-shot result), charged at measured execution cost plus Fable's bidding overhead. `results/fable_calibration_20260610/synthetic_market.py` builds the variants.
 
 | Condition | Avg Score | Pass Rate | Cost/rep | Score/$ |
 | --- | ---: | ---: | ---: | ---: |
-| Market (original, per rep) | 7.2 | 76% | $0.45 | 16.0 |
-| Fable-included market, bid-routed (synthetic) | 7.4 | 78% | $0.75 | 9.9 |
-| Fable-included market, outcome-routed (synthetic) | 8.7 | 93% | $1.07 | 8.1 |
+| Original market (measured) | 7.2 | 76% | $0.45 | 16.0 |
+| Frontier CLI market (measured) | 7.3 | 73% | $1.85 | 4.0 |
 | Solo Fable 5 (measured) | 8.1 | 87% | $1.19 | 6.8 |
+| Original + Fable, bid-routed p<0.75 | 7.4 | 78% | $0.75 | 9.9 |
+| Original + Fable, bid-routed p<0.85 | 7.6 | 80% | $0.95 | 8.1 |
+| Original + Fable, outcome-routed | 8.7 | 93% | $1.07 | 8.1 |
+| Frontier + Fable, bid-routed p<0.75 | 7.6 | 80% | $1.69 | 4.5 |
+| Frontier + Fable, bid-routed p<0.85 | 8.2 | 87% | $1.92 | 4.3 |
+| Frontier + Fable, no-fill backstop | 8.6 | 87% | $2.43 | 3.5 |
+| Frontier + Fable, outcome-routed | 8.8 | 93% | $2.00 | 4.4 |
 
-Bid-routed means tasks go to Fable only when its own bid says p < 0.75 (three tasks). This is the rule we expected to work, and it barely moves the needle. Fable's low-confidence flags mark tasks that are hard for everyone, including Fable: it failed `reasoning-004` just as the market did, and the market already handled `reasoning-005` and `coding-005` decently. Paying a premium for tasks the premium model also finds hard buys little.
+Bid-routed sends a task to Fable only when Fable's own bid is below the threshold. Outcome-routed sends Fable every task the base market failed; it uses outcome history a single session would not have, so it is the ceiling reputation-style updating converges toward. No-fill backstop has Fable take only the tasks nobody filled.
 
-Outcome-routed means the allocator sends Fable every task the cheap pool ever failed (seven tasks) and keeps the cheap pool on the other eight. That beats solo Fable on quality and on cost. The catch: it uses cross-rep outcome history that a single session would not have. It is the ceiling that reputation-style updating converges toward, not a result any one session would produce.
+Two findings sit side by side here.
 
-The two rules differ on exactly one input. Fable's bids say where Fable struggles. Outcome history says where the cheap pool struggles, and those are different tasks: the market's worst failures (`coding-003` at 0%, `coding-001` at 67%) were tasks Fable bid 0.92+ on and aced. So the original framing of this README holds up better than our first read of the calibration result suggested: good self-assessment alone does not route well. Self-assessment plus observed outcomes does.
+On the cheap pool, Fable's bids barely help (7.2 to 7.4). Its low-confidence flags mark tasks that are hard for everyone, including Fable: it failed `reasoning-004` just as the market did. The market's actual weak spots (`coding-003` at 0%, `coding-001` at 67%) were tasks Fable bid 0.92+ on and aced, and bids alone never find them. Only outcome history does, and outcome-routing beats solo Fable on quality and cost (8.7 at $1.07).
+
+On the frontier pool, bid-routing recovers much more (7.3 to 8.2 at p<0.85), because three of the frontier market's four failures happen to sit where Fable's bids are lowest, including the unfilled `synthesis-004`. That overlap is partly luck of the no-fills, and the result still trails solo Fable on score per dollar.
+
+The conclusion from the original run survives both extensions: good self-assessment alone does not route well, and an expensive pool does not fix it. Self-assessment plus observed outcomes routes better than anything measured, on either base.
 
 Caveats: n=15 with one rep against three in the original run. The agents ran in a Cursor scaffold, not a raw API call. And this measures forecast quality, not market behavior. Nothing here shows what Fable would bid under incentives, so the honesty caveat at the top of this README stands. One of the two failures (`reasoning-001`) was a correct answer written as LaTeX, which the exact-match check misses.
 
